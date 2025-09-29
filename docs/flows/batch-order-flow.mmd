@@ -1,0 +1,50 @@
+﻿flowchart LR
+    subgraph Seller
+        A[Thu hoạch & chuẩn bị dữ liệu]
+        B[Tạo Batch trong hệ thống]
+        C[Niêm yết Product từ Batch]
+    end
+
+    subgraph Backend/NestJS
+        D[API tạo Batch]
+        E[API tạo Product]
+        F[API tạo Order]
+        G[API cập nhật trạng thái Release/Refund]
+    end
+
+    subgraph Blockchain/Hardhat
+        H[(Smart Contract Escrow)]
+    end
+
+    subgraph IPFS
+        I[(Lưu metadata & chứng chỉ)]
+    end
+
+    subgraph Buyer
+        J[Xem danh sách Product]
+        K[Tạo Order & ký giao dịch]
+        L[Xác nhận nhận hàng hoặc yêu cầu refund]
+    end
+
+    subgraph Admin
+        M[Giải quyết tranh chấp]
+    end
+
+    A --> B
+    B -->|Upload metadata| I
+    B --> D
+    D -->|Hash + CID| H
+    D --> E
+    E --> C
+    C --> J
+    J --> K
+    K --> F
+    F -->|Khóa tiền escrow| H
+    H -->|Sự kiện OrderEscrowed| G
+    L --> G
+    G -->|Release| H
+    G -->|Refund| H
+    H -->|Event Release/Refund| G
+    G -->|Cập nhật Order| F
+    L -->|Escalate| M
+    M -->|Quyết định Refund| G

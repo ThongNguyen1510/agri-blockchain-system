@@ -1,0 +1,17 @@
+﻿import { ethers } from "hardhat";
+
+async function main() {
+  const [deployer] = await ethers.getSigners();
+  console.log("Deploying AgroEscrow with account:", deployer.address);
+
+  const AgroEscrow = await ethers.getContractFactory("AgroEscrow");
+  const contract = await AgroEscrow.deploy(deployer.address);
+  await contract.waitForDeployment();
+
+  console.log("AgroEscrow deployed to:", await contract.getAddress());
+}
+
+main().catch((error) => {
+  console.error(error);
+  process.exitCode = 1;
+});
