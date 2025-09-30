@@ -22,6 +22,21 @@ traceability experiments.
 - MetaMask browser extension (or any WalletConnect-compatible wallet).
 - Windows PowerShell or Command Prompt. When PowerShell blocks scripts, prefix commands with `cmd /c ...`.
 
+## Quick setup for teammates
+If someone is onboarding, they can run the helper script after cloning:
+
+- **Windows PowerShell**
+  ```powershell
+  Set-ExecutionPolicy -Scope CurrentUser RemoteSigned   # only once if needed
+  ./scripts/setup.ps1                                   # installs packages & prisma client
+  ```
+- **Git Bash / WSL / macOS**
+  ```bash
+  chmod +x scripts/setup.sh  # first time only
+  ./scripts/setup.sh
+  ```
+
+The script runs `npm ci` inside `apps/frontend`, `apps/backend`, `apps/contracts`, and generates the Prisma Client. Use `--SkipPrisma` (PowerShell) or `--skip-prisma` (bash) if the database is not ready yet.
 ## Local run guide
 ### 1. Backend (NestJS + Prisma)
 ```bash

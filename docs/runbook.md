@@ -14,6 +14,12 @@ This guide captures the exact steps we validated on 29/09/2025 to boot the AgroC
 1. Create the `AgroChain` database and tables (if not already present) using the T-SQL script in the project notes.
 2. Copy `apps/backend/.env.example` to `.env` and set `DATABASE_URL="sqlserver://sa:<password>@localhost:1433;database=AgroChain;encrypt=true;trustServerCertificate=true"`.
 
+### Quick install script
+Instead of running each command manually you can execute the helper script after cloning:
+- PowerShell: `./scripts/setup.ps1`
+- Git Bash / macOS: `./scripts/setup.sh`
+
+Add `--SkipPrisma` (PowerShell) or `--skip-prisma` (bash) if the database is not configured yet.
 ## 3. Backend (NestJS + Prisma)
 ```bash
 cd apps/backend
