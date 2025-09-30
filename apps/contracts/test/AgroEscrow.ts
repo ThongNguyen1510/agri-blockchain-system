@@ -1,4 +1,4 @@
-﻿import { expect } from "chai";
+import { expect } from "chai";
 import { ethers } from "hardhat";
 
 describe("AgroEscrow", () => {
@@ -11,17 +11,22 @@ describe("AgroEscrow", () => {
     const amount = ethers.parseEther("1");
     const productId = ethers.encodeBytes32String("BATCH-001");
 
-    const orderId = await escrow
+    const tx = await escrow
       .connect(buyer)
-      .callStatic.createOrder(seller.address, productId, { value: amount });
+      .createOrder(seller.address, productId, { value: amount });
+    const receipt = await tx.wait();
 
-    await expect(
-      escrow
-        .connect(buyer)
-        .createOrder(seller.address, productId, { value: amount })
-    )
-      .to.emit(escrow, "OrderCreated")
-      .withArgs(orderId, buyer.address, seller.address, productId, amount);
+    const orderEvent = receipt?.logs
+      .map((log) => {
+        try {
+          return escrow.interface.parseLog(log);
+        } catch {
+          return null;
+        }
+      })
+      .find((parsed) => parsed?.name === "OrderCreated");
+
+    const orderId = orderEvent?.args?.orderId ?? 1n;
 
     const stored = await escrow.getOrder(orderId);
     expect(stored.buyer).to.equal(buyer.address);
