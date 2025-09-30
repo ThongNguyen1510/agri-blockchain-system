@@ -1,0 +1,39 @@
+﻿name: CI
+
+on:
+  push:
+    branches: ["main", "develop"]
+  pull_request:
+
+jobs:
+  build:
+    name: ${{ matrix.project }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        project: ["frontend", "backend", "contracts"]
+    defaults:
+      run:
+        working-directory: apps/${{ matrix.project }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: npm
+          cache-dependency-path: apps/${{ matrix.project }}/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run project command
+        run: |
+          if [ "${{ matrix.project }}" = "contracts" ]; then
+            npm run test
+          else
+            npm run build
+          fi
+        shell: bash
