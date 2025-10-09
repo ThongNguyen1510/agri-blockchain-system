@@ -6,6 +6,9 @@ import { RolesGuard } from "./auth/guards/roles.guard";
 import { HealthController } from "./health/health.controller";
 import { PrismaModule } from "./prisma/prisma.module";
 import { UsersModule } from "./users/users.module";
+import { BatchesModule } from "./batches/batches.module";
+import { ProductsModule } from "./products/products.module";
+import { OrdersModule } from "./orders/orders.module";
 
 @Module({
   imports: [
@@ -13,6 +16,9 @@ import { UsersModule } from "./users/users.module";
     PrismaModule,
     UsersModule,
     AuthModule,
+    BatchesModule,
+    ProductsModule,
+    OrdersModule,
   ],
   controllers: [HealthController],
   providers: [
@@ -23,4 +29,3 @@ import { UsersModule } from "./users/users.module";
   ],
 })
 export class AppModule {}
-
