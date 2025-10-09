@@ -13,6 +13,7 @@ traceability experiments.
 ## Current status (29/09/2025)
 - Done: monorepo scaffolding for frontend, backend, and contracts.
 - Done: Prisma schema mapped to the existing SQL Server tables and client generation tested.
+- Done: Backend authentication (JWT login/register), Swagger docs, and seed users wired up.
 - Done: Hardhat local network deploys `AgroEscrow` and the frontend connects via WalletConnect/MetaMask.
 - Next: implement product/order APIs, integrate the escrow flow, and design admin tools.
 
@@ -41,12 +42,13 @@ The script runs `npm ci` inside `apps/frontend`, `apps/backend`, `apps/contracts
 ### 1. Backend (NestJS + Prisma)
 ```bash
 cd apps/backend
-copy .env.example .env      # update DATABASE_URL with your SA password
+copy .env.example .env      # update DATABASE_URL, JWT_SECRET, JWT_EXPIRES_IN
 cmd /c npm install          # or run via Command Prompt
 cmd /c npx prisma generate
+cmd /c npm run prisma:seed   # optional: seeds admin/seller/buyer demo users
 cmd /c npm run start:dev
 ```
-Keep this terminal open; the API listens on `http://localhost:3000` by default.
+Keep this terminal open; the API listens on `http://localhost:3000` by default. Swagger UI is served at `http://localhost:3000/docs`.
 
 ### 2. Contracts (Hardhat)
 ```bash
@@ -102,7 +104,7 @@ Additional notes and diagrams live under `docs/`:
 - Missing MetaMask async storage module: run `npm install @react-native-async-storage/async-storage` in `apps/frontend`.
 
 ## Next steps
-- Build authentication and role-based access control in the backend.
 - Implement Batch/Product/Order CRUD endpoints and connect them to the frontend.
+- Wire frontend flows (dashboard, orders, disputes) to the new auth-protected APIs.
 - Extend `AgroEscrow` with dispute handling and tie events into `AuditLog`.
 - Add automated tests and CI pipelines (lint/test) for all modules.

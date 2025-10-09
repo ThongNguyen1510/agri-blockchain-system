@@ -12,7 +12,10 @@ This guide captures the exact steps we validated on 29/09/2025 to boot the AgroC
 
 ## 2. Database
 1. Create the `AgroChain` database and tables (if not already present) using the T-SQL script in the project notes.
-2. Copy `apps/backend/.env.example` to `.env` and set `DATABASE_URL="sqlserver://sa:<password>@localhost:1433;database=AgroChain;encrypt=true;trustServerCertificate=true"`.
+2. Copy `apps/backend/.env.example` to `.env` and set:
+   - `DATABASE_URL="sqlserver://sa:<password>@localhost:1433;database=AgroChain;encrypt=true;trustServerCertificate=true"`
+   - `JWT_SECRET` (any strong string for signing tokens)
+   - `JWT_EXPIRES_IN` (e.g. `1d`)
 
 ### Quick install script
 Instead of running each command manually you can execute the helper script after cloning:
@@ -25,9 +28,15 @@ Add `--SkipPrisma` (PowerShell) or `--skip-prisma` (bash) if the database is not
 cd apps/backend
 cmd /c npm install
 cmd /c npx prisma generate     # schema already maps to existing tables
+cmd /c npm run prisma:seed     # optional: seeds admin/seller/buyer demo accounts
 cmd /c npm run start:dev
 ```
 Output should contain `Nest application successfully started`. Leave the process running.
+Seeded demo accounts (passwords in `prisma/seed.ts`):
+- admin@agrochain.local / Admin123!
+- seller@agrochain.local / Seller123!
+- buyer@agrochain.local / Buyer123!
+Swagger is served at `http://localhost:3000/docs` for quick API exploration (Bearer token required for protected routes).
 
 ## 4. Hardhat network and contract
 Terminal A:
