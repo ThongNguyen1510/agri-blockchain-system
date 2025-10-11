@@ -2,21 +2,15 @@
 import React from 'react';
 import { Card, CardContent, Typography } from '@mui/material';
 
-// --- BẮT ĐẦU SỬA LỖI ---
-
-// 1. Định nghĩa kiểu cho props của component
 interface StatCardProps {
   title: string;
-  value: string | number; // Giá trị có thể là chuỗi hoặc số
-  icon?: React.ReactNode; // Icon là một React Node và không bắt buộc (optional)
+  value: string | number;
 }
 
-// 2. Áp dụng kiểu `StatCardProps` cho component
-const StatCard = ({ title, value, icon }: StatCardProps) => {
+const StatCard = ({ title, value }: StatCardProps) => {
   return (
     <Card>
       <CardContent>
-        {icon}
         <Typography color="text.secondary" gutterBottom>
           {title}
         </Typography>
@@ -27,5 +21,4 @@ const StatCard = ({ title, value, icon }: StatCardProps) => {
     </Card>
   );
 };
-
 export default StatCard;

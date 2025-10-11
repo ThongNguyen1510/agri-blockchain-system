@@ -1,10 +1,8 @@
 // src/components/dashboard/SalesChart.tsx
-
 import React from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Card, CardContent, Typography } from '@mui/material';
 
-// Thêm "export" vào đây để các file khác có thể import và sử dụng interface này
 export interface ChartDataPoint {
   name: string;
   doanhthu: number;
@@ -33,5 +31,4 @@ const SalesChart = ({ data }: SalesChartProps) => {
     </Card>
   );
 };
-
 export default SalesChart;

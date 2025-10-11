@@ -3,20 +3,16 @@ import React from 'react';
 import { Drawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Toolbar } from '@mui/material';
 import { Dashboard, Store, ShoppingCart, People, Gavel, History } from '@mui/icons-material';
 import { useUserStore } from '../../store/userStore';
-import { Link } from 'react-router-dom';
+import Link from 'next/link'; // Use the correct Link component from Next.js
 
 const drawerWidth = 240;
 
-// --- BẮT ĐẦU SỬA LỖI ---
-
-// 1. Định nghĩa kiểu cho một mục trong menu
 interface MenuItem {
   text: string;
   icon: React.ReactNode;
   path: string;
 }
 
-// Áp dụng kiểu MenuItem[] cho các mảng menu để tăng tính an toàn
 const sellerMenu: MenuItem[] = [
   { text: 'Dashboard', icon: <Dashboard />, path: '/dashboard' },
   { text: 'Quản lý Lô hàng', icon: <Store />, path: '/batches' },
@@ -38,7 +34,6 @@ const adminMenu: MenuItem[] = [
 const Sidebar = () => {
   const { user } = useUserStore();
 
-  // 2. Khai báo kiểu rõ ràng cho biến menuItems
   let menuItems: MenuItem[] = [];
   
   if (user?.role === 'Seller') menuItems = sellerMenu;
@@ -56,14 +51,16 @@ const Sidebar = () => {
     >
       <Toolbar />
       <List>
-        {/* TypeScript giờ đã biết `item` là một đối tượng `MenuItem` */}
         {menuItems.map((item) => (
-          <ListItem key={item.text} disablePadding>
-            <ListItemButton component={Link} to={item.path}>
-              <ListItemIcon>{item.icon}</ListItemIcon>
-              <ListItemText primary={item.text} />
-            </ListItemButton>
-          </ListItem>
+          // Use the Next.js Link component pattern
+          <Link href={item.path} passHref key={item.text}>
+            <ListItem component="a" disablePadding>
+              <ListItemButton>
+                <ListItemIcon>{item.icon}</ListItemIcon>
+                <ListItemText primary={item.text} />
+              </ListItemButton>
+            </ListItem>
+          </Link>
         ))}
       </List>
     </Drawer>

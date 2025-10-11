@@ -4,7 +4,7 @@ import { persist } from 'zustand/middleware';
 
 type UserRole = 'Admin' | 'Seller' | 'Buyer';
 
-// Thêm "export" vào đây để các file khác có thể import và sử dụng interface này
+// Export interface User để các file khác có thể import
 export interface User {
   id: number;
   email: string;
@@ -28,7 +28,7 @@ export const useUserStore = create<UserState>()(
       logout: () => set({ user: null, token: null }),
     }),
     {
-      name: 'user-storage',
+      name: 'user-storage', // tên key trong localStorage
     }
   )
 );
