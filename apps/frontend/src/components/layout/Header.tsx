@@ -2,35 +2,36 @@
 import React from 'react';
 import { AppBar, Toolbar, Typography, Button, Box } from '@mui/material';
 import { useUserStore } from '../../store/userStore';
-import { useRouter } from 'next/router'; // Dùng router của Next.js
+import { useRouter } from 'next/router';
+import { ConnectWalletButton } from '../ConnectWalletButton'; // Import component mới
 
 const Header = () => {
   const { user, logout } = useUserStore();
   const router = useRouter();
 
   const handleLogout = () => {
-    logout(); // Xóa thông tin user khỏi state
-    router.replace('/login'); // Chuyển hướng về trang đăng nhập
+    logout();
+    router.replace('/login');
   };
 
   return (
     <AppBar position="static" color="default" elevation={1}>
       <Toolbar>
         <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-          AgroChain Dashboard
+          AgroChain
         </Typography>
         
-        {/* Chỉ hiển thị khi có thông tin user */}
-        {user && (
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <Typography>Chào, {user.email} ({user.role})</Typography>
-            
-            {/* --- NÚT ĐĂNG XUẤT ĐÂY RỒI --- */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          {/* Luôn hiển thị nút kết nối ví */}
+          <ConnectWalletButton />
+
+          {/* Chỉ hiển thị nút đăng xuất khi đã đăng nhập */}
+          {user && (
             <Button variant="outlined" onClick={handleLogout}>
               Đăng xuất
             </Button>
-          </Box>
-        )}
+          )}
+        </Box>
       </Toolbar>
     </AppBar>
   );
