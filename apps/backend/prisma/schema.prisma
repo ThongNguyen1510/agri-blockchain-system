@@ -1,92 +1,69 @@
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["mongoDb"]
 }
 
 datasource db {
-  provider = "sqlserver"
+  provider = "mongodb"
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id            Int         @id @default(autoincrement()) @map("Id") @db.Int
-  email         String      @unique @map("Email") @db.NVarChar(100)
-  passwordHash  String      @map("PasswordHash") @db.NVarChar(255)
-  role          String      @map("Role") @db.NVarChar(20)
-  walletAddress String      @map("WalletAddress") @db.NVarChar(100)
-  createdAt     DateTime    @default(now()) @map("CreatedAt") @db.DateTime2
-
-  batches       Batch[]     @relation("UserBatches")
-  products      Product[]   @relation("UserProducts")
-  buyerOrders   Order[]     @relation("OrderBuyer")
-  sellerOrders  Order[]     @relation("OrderSeller")
-  auditLogs     AuditLog[]
-
-  @@map("User")
+model AdminLog {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
 }
 
-model Batch {
-  id          Int       @id @default(autoincrement()) @map("Id") @db.Int
-  batchCode   String    @unique @map("BatchCode") @db.NVarChar(50)
-  farmName    String?   @map("FarmName") @db.NVarChar(100)
-  harvestDate DateTime? @map("HarvestDate") @db.Date
-  variety     String?   @map("Variety") @db.NVarChar(100)
-  notes       String?   @map("Notes") @db.NVarChar(500)
-  ipfsCid     String?   @map("IpfsCid") @db.NVarChar(255)
-  hashSha256  String?   @map("HashSha256") @db.NVarChar(255)
-  createdBy   Int       @map("CreatedBy") @db.Int
-  createdAt   DateTime  @default(now()) @map("CreatedAt") @db.DateTime2
-
-  owner    User     @relation("UserBatches", fields: [createdBy], references: [id], onUpdate: NoAction, onDelete: NoAction)
-  products Product[]
-
-  @@map("Batch")
-}
-
-model Product {
-  id            Int       @id @default(autoincrement()) @map("Id") @db.Int
-  batchId       Int       @map("BatchId") @db.Int
-  sellerId      Int       @map("SellerId") @db.Int
-  name          String    @map("Name") @db.NVarChar(100)
-  description   String?   @map("Description") @db.NVarChar(500)
-  priceWei      BigInt    @map("PriceWei") @db.BigInt
-  stock         Int       @map("Stock") @db.Int
-  coverImageUrl String?   @map("CoverImageUrl") @db.NVarChar(255)
-  createdAt     DateTime  @default(now()) @map("CreatedAt") @db.DateTime2
-
-  batch  Batch  @relation(fields: [batchId], references: [id], onUpdate: NoAction, onDelete: NoAction)
-  seller User   @relation("UserProducts", fields: [sellerId], references: [id], onUpdate: NoAction, onDelete: NoAction)
-  orders Order[]
-
-  @@map("Product")
-}
-
-model Order {
-  id              Int       @id @default(autoincrement()) @map("Id") @db.Int
-  onchainOrderId  String?   @map("OnchainOrderId") @db.NVarChar(100)
-  buyerId         Int       @map("BuyerId") @db.Int
-  sellerId        Int       @map("SellerId") @db.Int
-  productId       Int       @map("ProductId") @db.Int
-  quantity        Int       @map("Quantity") @db.Int
-  totalWei        BigInt    @map("TotalWei") @db.BigInt
-  status          String    @map("Status") @db.NVarChar(20)
-  shippingAddress String?   @map("ShippingAddress") @db.NVarChar(255)
-  createdAt       DateTime  @default(now()) @map("CreatedAt") @db.DateTime2
-
-  buyer   User    @relation("OrderBuyer", fields: [buyerId], references: [id], onUpdate: NoAction, onDelete: NoAction)
-  seller  User    @relation("OrderSeller", fields: [sellerId], references: [id], onUpdate: NoAction, onDelete: NoAction)
-  product Product @relation(fields: [productId], references: [id], onUpdate: NoAction, onDelete: NoAction)
-
-  @@map("Order")
+model Analytics {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
 }
 
 model AuditLog {
-  id           Int      @id @default(autoincrement()) @map("Id") @db.Int
-  actorId      Int      @map("ActorId") @db.Int
-  action       String   @map("Action") @db.NVarChar(100)
-  metadataJson String?  @map("MetadataJson") @db.NVarChar(4000)
-  createdAt    DateTime @default(now()) @map("CreatedAt") @db.DateTime2
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+}
 
-  actor User @relation(fields: [actorId], references: [id], onUpdate: NoAction, onDelete: NoAction)
+model Batch {
+  id        String @id @default(auto()) @map("_id") @db.ObjectId
+  /// Field referred in an index, but found no data to define the type.
+  BatchCode Json?  @unique
+}
 
-  @@map("AuditLog")
+model Certification {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+}
+
+model File {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+}
+
+model Marketplace {
+  id        String @id @default(auto()) @map("_id") @db.ObjectId
+  /// Field referred in an index, but found no data to define the type.
+  productId Json?  @unique
+}
+
+model Notification {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+}
+
+model Order {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+}
+
+model Payment {
+  id      String @id @default(auto()) @map("_id") @db.ObjectId
+  /// Field referred in an index, but found no data to define the type.
+  orderId Json?  @unique
+}
+
+model Product {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+}
+
+model QRCode {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+}
+
+model User {
+  id    String @id @default(auto()) @map("_id") @db.ObjectId
+  /// Field referred in an index, but found no data to define the type.
+  Email Json?  @unique
 }
