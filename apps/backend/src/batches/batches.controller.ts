@@ -1,13 +1,14 @@
-import { Controller, Get, Param, ParseIntPipe, Post, Body, UseGuards } from "@nestjs/common";
+﻿import { Body, Controller, Get, Param, ParseIntPipe, Post, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
-import { UserRole } from "../users/user-role.enum";
 import { CurrentUser } from "../auth/decorators/current-user.decorator";
 import type { CurrentUserType } from "../auth/decorators/current-user.decorator";
 import { Roles } from "../auth/decorators/roles.decorator";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
+import { UserRole } from "../users/user-role.enum";
+import { BatchesService } from "./batches.service";
 import { CreateBatchDto } from "./dto/create-batch.dto";
 import { BatchDto } from "./dto/batch.dto";
-import { BatchesService } from "./batches.service";
+import { BatchListItemDto } from "./dto/batch-list-item.dto";
 
 @ApiTags("batches")
 @ApiBearerAuth()
@@ -32,6 +33,11 @@ export class BatchesController {
     return batches.map(BatchDto.fromEntity);
   }
 
+  @Get("me")
+  async getMySummaries(@CurrentUser() user: CurrentUserType): Promise<BatchListItemDto[]> {
+    return this.batchesService.findSummariesForUser(user);
+  }
+
   @Get(":id")
   async findOne(
     @CurrentUser() user: CurrentUserType,
@@ -41,4 +47,3 @@ export class BatchesController {
     return BatchDto.fromEntity(batch);
   }
 }
-

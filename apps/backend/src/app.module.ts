@@ -1,4 +1,4 @@
-import { Module } from "@nestjs/common";
+﻿import { Module } from "@nestjs/common";
 import { APP_GUARD } from "@nestjs/core";
 import { ConfigModule } from "@nestjs/config";
 import { AuthModule } from "./auth/auth.module";
@@ -9,6 +9,7 @@ import { UsersModule } from "./users/users.module";
 import { BatchesModule } from "./batches/batches.module";
 import { ProductsModule } from "./products/products.module";
 import { OrdersModule } from "./orders/orders.module";
+import { DashboardModule } from "./dashboard/dashboard.module";
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { OrdersModule } from "./orders/orders.module";
     BatchesModule,
     ProductsModule,
     OrdersModule,
+    DashboardModule,
   ],
   controllers: [HealthController],
   providers: [
