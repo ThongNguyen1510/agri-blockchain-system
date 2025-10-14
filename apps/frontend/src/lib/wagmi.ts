@@ -15,6 +15,5 @@ export const wagmiConfig = getDefaultConfig({
     [hardhat.id]: http(localRpcUrl),
     [sepolia.id]: http(),
   },
-  initialChain: hardhat,
   ssr: true,
 });
