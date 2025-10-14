@@ -78,6 +78,8 @@ export class BatchesService {
 
   private generateBatchCode(): string {
     const now = new Date();
+    const datePart = ${now.getUTCFullYear()};
+    const timePart = ${now.getUTCHours().toString().padStart(2, "0")};
     return BATCH--;
   }
 }
