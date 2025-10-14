@@ -1,10 +1,8 @@
-// src/store/userStore.ts
-import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
 
-type UserRole = 'Admin' | 'Seller' | 'Buyer';
+export type UserRole = "Admin" | "Seller" | "Buyer";
 
-// Export interface User để các file khác có thể import
 export interface User {
   id: number;
   email: string;
@@ -28,7 +26,7 @@ export const useUserStore = create<UserState>()(
       logout: () => set({ user: null, token: null }),
     }),
     {
-      name: 'user-storage', // tên key trong localStorage
-    }
-  )
+      name: "agrochain-user",
+    },
+  ),
 );

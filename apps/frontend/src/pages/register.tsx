@@ -1,114 +1,179 @@
-// src/pages/register.tsx
-import React, { useState } from 'react';
-import { 
-  Container, Box, TextField, Button, Typography, Alert, Link as MuiLink, 
-  FormControl, InputLabel, Select, MenuItem, SelectChangeEvent 
-} from '@mui/material';
-import { useRouter } from 'next/router';
-import Link from 'next/link';
+﻿import { useEffect, useMemo, useState } from "react";
+import {
+  Alert,
+  Box,
+  Button,
+  Card,
+  CardContent,
+  FormControl,
+  InputLabel,
+  Link as MuiLink,
+  MenuItem,
+  Select,
+  Stack,
+  TextField,
+  Typography,
+} from "@mui/material";
+import Link from "next/link";
+import { useRouter } from "next/router";
+import { ApiError, apiFetch } from "../lib/apiClient";
+import { useUserStore, User } from "../store/userStore";
 
-interface RegisterData {
-  email: string;
-  password: string;
-  role: 'Buyer' | 'Seller';
-  walletAddress: string;
+type RoleOption = "Seller" | "Buyer";
+
+interface AuthResponse {
+  accessToken: string;
+  user: User;
 }
 
-const apiRegister = async (data: RegisterData) => {
-  console.log("Đang đăng ký với dữ liệu:", data);
-  return { success: true };
-};
-
 const RegisterPage = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [role, setRole] = useState<'Buyer' | 'Seller'>('Buyer');
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
   const router = useRouter();
+  const { user: currentUser, setUser } = useUserStore();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [walletAddress, setWalletAddress] = useState("");
+  const [role, setRole] = useState<RoleOption>("Buyer");
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleRoleChange = (event: SelectChangeEvent) => {
-    setRole(event.target.value as 'Buyer' | 'Seller');
-  };
+  useEffect(() => {
+    if (router.query.role === "seller" || router.query.role === "Seller") {
+      setRole("Seller");
+    }
+  }, [router.query.role]);
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setError('');
-    setSuccess('');
+  useEffect(() => {
+    if (currentUser) {
+      router.replace("/dashboard");
+    }
+  }, [currentUser, router]);
+
+  const isFormValid = useMemo(() => {
+    return Boolean(email && password && confirmPassword && walletAddress);
+  }, [email, password, confirmPassword, walletAddress]);
+
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setError(null);
+    setSuccess(null);
 
     if (password !== confirmPassword) {
-      setError('Mật khẩu nhập lại không khớp!');
+      setError("Mật khẩu và xác nhận mật khẩu không khớp.");
       return;
     }
-    
-    try {
-      const walletAddress = '0x...';
-      await apiRegister({ email, password, role, walletAddress });
-      setSuccess('Đăng ký thành công! Bạn sẽ được chuyển đến trang đăng nhập.');
-      
-      setTimeout(() => {
-        router.push('/login');
-      }, 2000);
 
+    setIsSubmitting(true);
+    try {
+      const { accessToken, user } = await apiFetch<AuthResponse>("/auth/register", {
+        method: "POST",
+        body: { email, password, role, walletAddress },
+      });
+      setUser(user, accessToken);
+      setSuccess("Đăng ký thành công! Đang chuyển đến dashboard...");
+      setTimeout(() => router.replace("/dashboard"), 1200);
     } catch (err) {
-      if (err instanceof Error) {
-        setError(err.message);
-      } else {
-        setError('Đã xảy ra lỗi trong quá trình đăng ký');
-      }
+      const message = err instanceof ApiError ? err.message : "Đăng ký thất bại. Vui lòng thử lại.";
+      setError(message);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   return (
-    <Container maxWidth="xs">
-      <Box sx={{ marginTop: 8, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-        <Typography component="h1" variant="h5">Đăng ký tài khoản</Typography>
-        <Box component="form" onSubmit={handleSubmit} sx={{ mt: 3, width: '100%' }}>
-          {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-          {success && <Alert severity="success" sx={{ mb: 2 }}>{success}</Alert>}
-          
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <TextField
-              required fullWidth id="email" label="Địa chỉ Email"
-              name="email" autoComplete="email"
-              value={email} onChange={(e) => setEmail(e.target.value)}
-            />
-            <TextField
-              required fullWidth name="password" label="Mật khẩu"
-              type="password" id="password"
-              value={password} onChange={(e) => setPassword(e.target.value)}
-            />
-            <TextField
-              required fullWidth name="confirmPassword" label="Nhập lại mật khẩu"
-              type="password" id="confirmPassword"
-              value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)}
-            />
-            <FormControl fullWidth>
-              <InputLabel id="role-select-label">Vai trò</InputLabel>
-              <Select
-                labelId="role-select-label"
-                id="role-select"
-                value={role}
-                label="Vai trò"
-                onChange={handleRoleChange}
-              >
-                <MenuItem value={'Buyer'}>Người mua (Buyer)</MenuItem>
-                <MenuItem value={'Seller'}>Người bán (Seller)</MenuItem>
-              </Select>
-            </FormControl>
-          </Box>
-          <Button type="submit" fullWidth variant="contained" sx={{ mt: 3, mb: 2 }}>
-            Đăng ký
-          </Button>
-          <Box sx={{ width: '100%', display: 'flex', justifyContent: 'flex-end' }}>
-            <MuiLink component={Link} href="/login" variant="body2">
-              Đã có tài khoản? Đăng nhập
-            </MuiLink>
-          </Box>
-        </Box>
-      </Box>
-    </Container>
+    <Box
+      sx={{
+        minHeight: "100vh",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        backgroundColor: "#f4f6f8",
+        px: 2,
+      }}
+    >
+      <Card
+        elevation={0}
+        sx={{ width: "100%", maxWidth: 520, borderRadius: 4, border: "1px solid rgba(46,125,50,0.08)" }}
+      >
+        <CardContent sx={{ p: { xs: 4, md: 5 } }}>
+          <Stack spacing={3}>
+            <Stack spacing={1}>
+              <Typography variant="h4" fontWeight={700}>
+                Tạo tài khoản AgroChain
+              </Typography>
+              <Typography color="text.secondary">
+                Chọn vai trò phù hợp để sử dụng đầy đủ các tính năng Seller hoặc Buyer.
+              </Typography>
+            </Stack>
+
+            <Box component="form" onSubmit={handleSubmit}>
+              <Stack spacing={2}>
+                {error && <Alert severity="error">{error}</Alert>}
+                {success && <Alert severity="success">{success}</Alert>}
+
+                <TextField
+                  label="Email"
+                  type="email"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  required
+                  fullWidth
+                  autoComplete="email"
+                />
+                <TextField
+                  label="Mật khẩu"
+                  type="password"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  required
+                  fullWidth
+                />
+                <TextField
+                  label="Nhập lại mật khẩu"
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(event) => setConfirmPassword(event.target.value)}
+                  required
+                  fullWidth
+                />
+                <TextField
+                  label="Địa chỉ ví"
+                  value={walletAddress}
+                  onChange={(event) => setWalletAddress(event.target.value)}
+                  placeholder="0x..."
+                  required
+                  fullWidth
+                />
+                <FormControl fullWidth>
+                  <InputLabel id="role-select-label">Vai trò</InputLabel>
+                  <Select
+                    labelId="role-select-label"
+                    label="Vai trò"
+                    value={role}
+                    onChange={(event) => setRole(event.target.value as RoleOption)}
+                  >
+                    <MenuItem value="Buyer">Người mua (Buyer)</MenuItem>
+                    <MenuItem value="Seller">Người bán (Seller)</MenuItem>
+                  </Select>
+                </FormControl>
+
+                <Button type="submit" variant="contained" size="large" disabled={isSubmitting || !isFormValid}>
+                  {isSubmitting ? "Đang xử lý..." : "Đăng ký"}
+                </Button>
+              </Stack>
+            </Box>
+
+            <Typography variant="body2" color="text.secondary">
+              Đã có tài khoản?{" "}
+              <MuiLink component={Link} href="/login" underline="hover">
+                Đăng nhập ngay
+              </MuiLink>
+            </Typography>
+          </Stack>
+        </CardContent>
+      </Card>
+    </Box>
   );
 };
 

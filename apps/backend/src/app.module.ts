@@ -6,6 +6,8 @@ import { RolesGuard } from "./auth/guards/roles.guard";
 import { HealthController } from "./health/health.controller";
 import { PrismaModule } from "./prisma/prisma.module";
 import { UsersModule } from "./users/users.module";
+import { DashboardModule } from "./dashboard/dashboard.module";
+import { BatchesModule } from "./batches/batches.module";
 
 @Module({
   imports: [
@@ -13,6 +15,8 @@ import { UsersModule } from "./users/users.module";
     PrismaModule,
     UsersModule,
     AuthModule,
+    DashboardModule,
+    BatchesModule,
   ],
   controllers: [HealthController],
   providers: [
