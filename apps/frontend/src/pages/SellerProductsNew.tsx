@@ -103,16 +103,29 @@ const SellerProductsNew = () => {
     
     if (!validateForm()) return;
     
+    if (!token) {
+      toast.error("Vui lòng đăng nhập để tạo sản phẩm");
+      return;
+    }
+    
     setIsSubmitting(true);
     try {
-      // Note: This would need to be implemented in the API client
-      // For now, we'll show a success message
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
+      const productData = {
+        name: formData.name.trim(),
+        description: formData.description.trim() || undefined,
+        priceWei: formData.priceWei,
+        stock: parseInt(formData.stock),
+        batchId: parseInt(formData.batchId),
+        coverImageUrl: formData.coverImageUrl.trim() || undefined,
+      };
+      
+      await apiClient.createProduct(productData, token);
       
       toast.success("Sản phẩm đã được tạo thành công!");
       navigate("/seller/products");
     } catch (error) {
-      toast.error("Có lỗi xảy ra khi tạo sản phẩm");
+      const message = error instanceof Error ? error.message : "Có lỗi xảy ra khi tạo sản phẩm";
+      toast.error(message);
       console.error("Error creating product:", error);
     } finally {
       setIsSubmitting(false);

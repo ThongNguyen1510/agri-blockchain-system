@@ -31,7 +31,10 @@ async function apiRequest<TResponse>(path: string, options: RequestOptions = {})
     requestHeaders.set("Content-Type", "application/json");
   }
   if (token) {
+    console.log("Setting Authorization header with token:", token.substring(0, 20) + "...");
     requestHeaders.set("Authorization", `Bearer ${token}`);
+  } else {
+    console.warn("No token provided for API request to:", path);
   }
 
   const response = await fetch(url, {
@@ -115,6 +118,53 @@ export const apiClient = {
 
   getDashboardSummary(token: string) {
     return apiRequest<DashboardSummaryDto>("/dashboard/summary", { token });
+  },
+
+  // Batch APIs
+  createBatch(params: { 
+    batchCode: string; 
+    farmName: string; 
+    harvestDate: string; 
+    variety: string; 
+    notes?: string; 
+    ipfsCid?: string; 
+    hashSha256?: string; 
+  }, token: string) {
+    return apiRequest<BatchDto>("/batches", {
+      method: "POST",
+      token,
+      body: JSON.stringify(params),
+    });
+  },
+
+  getBatch(id: number, token: string) {
+    return apiRequest<BatchDto>(`/batches/${id}`, { token });
+  },
+
+  // Product APIs
+  createProduct(params: {
+    name: string;
+    description?: string;
+    priceWei: string;
+    stock: number;
+    batchId: number;
+    coverImageUrl?: string;
+  }, token: string) {
+    return apiRequest<ProductDto>("/products", {
+      method: "POST",
+      token,
+      body: JSON.stringify(params),
+    });
+  },
+
+  // Order APIs
+  getOrder(id: number, token: string) {
+    return apiRequest<OrderDto>(`/orders/${id}`, { token });
+  },
+
+  // User APIs
+  getProfile(token: string) {
+    return apiRequest<import("@/types/api").UserDto>("/users/me", { token });
   },
 };
 

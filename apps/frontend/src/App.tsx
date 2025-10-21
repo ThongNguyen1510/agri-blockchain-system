@@ -17,6 +17,9 @@ import SellerDashboard from "./pages/SellerDashboard";
 import SellerProducts from "./pages/SellerProducts";
 import SellerProductsNew from "./pages/SellerProductsNew";
 import SellerBatches from "./pages/SellerBatches";
+import SellerBatchesNew from "./pages/SellerBatchesNew";
+import UserProfile from "./pages/UserProfile";
+import DebugAuth from "./pages/DebugAuth";
 
 const queryClient = new QueryClient();
 
@@ -105,6 +108,27 @@ const App = () => (
                   </RequireAuth>
                 }
               />
+              <Route
+                path="/seller/batches/new"
+                element={
+                  <RequireAuth>
+                    <SellerBatchesNew />
+                  </RequireAuth>
+                }
+              />
+              
+              {/* User Profile */}
+              <Route
+                path="/profile"
+                element={
+                  <RequireAuth>
+                    <UserProfile />
+                  </RequireAuth>
+                }
+              />
+              
+              {/* Debug Auth */}
+              <Route path="/debug-auth" element={<DebugAuth />} />
               
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />

@@ -110,10 +110,10 @@ const Navbar = () => {
               <ShoppingCart className="h-5 w-5" />
             </Button>
             {token && user && (
-              <div className="hidden items-center gap-2 rounded-lg border bg-card px-3 py-1.5 text-sm text-muted-foreground md:flex">
+              <Link to="/profile" className="hidden items-center gap-2 rounded-lg border bg-card px-3 py-1.5 text-sm text-muted-foreground md:flex hover:bg-muted/50 transition-colors">
                 <User className="h-4 w-4 text-primary" />
                 <span className="max-w-[150px] truncate">{user.email}</span>
-              </div>
+              </Link>
             )}
             <Button variant="outline" onClick={handleWalletClick} disabled={isConnecting}>
               {walletLabel}

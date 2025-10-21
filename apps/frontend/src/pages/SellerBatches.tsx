@@ -126,10 +126,12 @@ const SellerBatches = () => {
                 Quản lý các lô hàng nông sản của bạn
               </p>
             </div>
-            <Button className="gap-2 bg-gradient-hero hover:opacity-90">
-              <Plus className="h-4 w-4" />
-              Tạo lô hàng mới
-            </Button>
+            <Link to="/seller/batches/new">
+              <Button className="gap-2 bg-gradient-hero hover:opacity-90">
+                <Plus className="h-4 w-4" />
+                Tạo lô hàng mới
+              </Button>
+            </Link>
           </div>
         </div>
 
@@ -220,10 +222,12 @@ const SellerBatches = () => {
               }
             </p>
             {!searchQuery && (
-              <Button className="gap-2 bg-gradient-hero hover:opacity-90">
-                <Plus className="h-4 w-4" />
-                Tạo lô hàng đầu tiên
-              </Button>
+              <Link to="/seller/batches/new">
+                <Button className="gap-2 bg-gradient-hero hover:opacity-90">
+                  <Plus className="h-4 w-4" />
+                  Tạo lô hàng đầu tiên
+                </Button>
+              </Link>
             )}
           </Card>
         ) : (

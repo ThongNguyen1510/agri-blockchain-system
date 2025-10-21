@@ -3,6 +3,7 @@ import { APP_GUARD } from "@nestjs/core";
 import { ConfigModule } from "@nestjs/config";
 import { AuthModule } from "./auth/auth.module";
 import { RolesGuard } from "./auth/guards/roles.guard";
+import { JwtAuthGuard } from "./auth/guards/jwt-auth.guard";
 import { HealthController } from "./health/health.controller";
 import { PrismaModule } from "./prisma/prisma.module";
 import { UsersModule } from "./users/users.module";
@@ -24,6 +25,11 @@ import { DashboardModule } from "./dashboard/dashboard.module";
   ],
   controllers: [HealthController],
   providers: [
+    // Ensure authentication guard runs BEFORE role guard
+    {
+      provide: APP_GUARD,
+      useClass: JwtAuthGuard,
+    },
     {
       provide: APP_GUARD,
       useClass: RolesGuard,

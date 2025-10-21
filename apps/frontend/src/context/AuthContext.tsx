@@ -38,11 +38,13 @@ export const AuthProvider = ({ children }: PropsWithChildren): JSX.Element => {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) {
         const parsed = JSON.parse(raw) as AuthState;
+        console.log("Loaded auth state from localStorage:", parsed);
         if (parsed?.token) {
           setState({ token: parsed.token, user: parsed.user ?? null });
         }
       }
-    } catch {
+    } catch (error) {
+      console.error("Error loading auth state from localStorage:", error);
       // ignore parse errors and clear corrupted value
       localStorage.removeItem(STORAGE_KEY);
     } finally {
