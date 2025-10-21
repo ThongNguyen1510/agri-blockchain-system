@@ -1,197 +1,180 @@
-﻿import { Box, Button, Container, Grid, Stack, Typography, Card, CardContent } from "@mui/material";
-import Link from "next/link";
-import Head from "next/head";
-import { ConnectButton } from "@rainbow-me/rainbowkit";
+import { Link } from "react-router-dom";
+import Navbar from "@/components/Navbar";
+import Footer from "@/components/Footer";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import {
+  ArrowRight,
+  ShieldCheck,
+  Leaf,
+  TrendingUp,
+  PackageSearch,
+  Wallet,
+  ShoppingBag,
+} from "lucide-react";
+import heroImage from "@/assets/hero-farm.jpg";
 
-const featureCards = [
+const features = [
   {
-    title: "Niêm yết minh bạch",
-    description:
-      "Mỗi lô hàng được gắn với CID/IPFS và chữ ký số, đảm bảo thông tin truy xuất rõ ràng cho người mua.",
+    icon: ShieldCheck,
+    title: "Minh bạch tuyệt đối",
+    description: "Mọi quy trình đều được xác thực trên blockchain, không thể sửa đổi.",
   },
   {
-    title: "Escrow tự động",
-    description:
-      "Hợp đồng thông minh giữ tiền ký quỹ và chỉ giải ngân khi điều kiện giao hàng được xác nhận đầy đủ.",
+    icon: PackageSearch,
+    title: "Truy xuất tức thì",
+    description: "Quét một mã QR để xem toàn bộ hành trình của lô hàng nông sản.",
   },
   {
-    title: "Theo dõi vận chuyển",
-    description:
-      "Dashboard trực quan cập nhật trạng thái lô hàng, nhiệt độ kho và dấu vết vận chuyển theo thời gian thực.",
+    icon: TrendingUp,
+    title: "Tối ưu giá trị",
+    description: "Người sản xuất nhận đúng giá trị, người mua an tâm về chất lượng.",
   },
 ];
 
-const metrics = [
-  { value: "78+", label: "Lô hàng đang hoạt động" },
-  { value: "1.9 ETH", label: "Giá trị escrow trong 7 ngày" },
-  { value: "24", label: "Đối tác đang giao dịch" },
-];
-
-const roleHighlights = [
+const steps = [
   {
-    title: "Seller",
-    body: "Quản lý batch, cập nhật chứng nhận và theo dõi tiến độ ký quỹ cho từng đơn hàng.",
-    cta: "Tạo tài khoản Seller",
-    href: "/register?role=seller",
+    number: "01",
+    icon: Wallet,
+    title: "Kết nối ví",
+    description: "Liên kết MetaMask hoặc WalletConnect để sẵn sàng giao dịch.",
   },
   {
-    title: "Buyer",
-    body: "Đặt hàng an toàn, theo dõi vận chuyển và yêu cầu giải ngân ngay khi sản phẩm đạt chuẩn.",
-    cta: "Khám phá sản phẩm",
-    href: "/register?role=buyer",
+    number: "02",
+    icon: ShoppingBag,
+    title: "Chọn nông sản",
+    description: "Duyệt marketplace và lựa chọn lô hàng từ các đối tác uy tín.",
   },
   {
-    title: "Admin",
-    body: "Giám sát toàn hệ thống, phê duyệt Seller mới và xử lý các tranh chấp escrow.",
-    cta: "Đăng nhập quản trị",
-    href: "/login",
+    number: "03",
+    icon: ShieldCheck,
+    title: "Xác minh & thanh toán",
+    description: "Kiểm tra chứng từ on-chain, sau đó thanh toán qua ký quỹ an toàn.",
   },
 ];
 
-const HomePage = () => {
+const Index = () => {
   return (
-    <>
-      <Head>
-        <title>AgroChain Marketplace</title>
-      </Head>
-      <Box sx={{ background: "linear-gradient(135deg, #e8f5e9 0%, #f1f8e9 50%, #ffffff 100%)", minHeight: "100vh" }}>
-        <Container maxWidth="lg" sx={{ py: { xs: 8, md: 12 } }}>
-          <Grid container spacing={6} alignItems="center">
-            <Grid item xs={12} md={7}>
-              <Stack spacing={3}>
-                <Typography variant="overline" color="success.main" fontWeight={700} letterSpacing={2}>
-                  Nền tảng blockchain cho nông sản
-                </Typography>
-                <Typography variant="h3" component="h1" fontWeight={700}>
-                  Quản lý và giao dịch nông sản minh bạch cùng AgroChain
-                </Typography>
-                <Typography variant="body1" color="text.secondary">
-                  Nền tảng dành cho hợp tác xã, nông hộ và nhà nhập khẩu. Tạo batch với dữ liệu nguồn gốc, ký quỹ an toàn bằng hợp đồng escrow và xây dựng niềm tin với đối tác quốc tế.
-                </Typography>
-                <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-                  <Button component={Link} href="/register" variant="contained" size="large">
-                    Đăng ký tài khoản
-                  </Button>
-                  <Button component={Link} href="/login" variant="outlined" size="large">
-                    Đăng nhập
-                  </Button>
-                </Stack>
-                <Box
-                  sx={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: 2,
-                    border: "1px solid rgba(46,125,50,0.2)",
-                    borderRadius: 3,
-                    px: 2,
-                    py: 1,
-                    bgcolor: "rgba(255,255,255,0.6)",
-                    backdropFilter: "blur(6px)",
-                    width: "fit-content",
-                  }}
-                >
-                  <Typography variant="body2" color="text.secondary">
-                    Kết nối ví để trải nghiệm đầy đủ:
-                  </Typography>
-                  <ConnectButton chainStatus="icon" showBalance={false} accountStatus="avatar" />
-                </Box>
-              </Stack>
-            </Grid>
-            <Grid item xs={12} md={5}>
-              <Stack spacing={2}>
-                {featureCards.map((item) => (
-                  <Card
-                    key={item.title}
-                    elevation={0}
-                    sx={{
-                      background: "rgba(255,255,255,0.7)",
-                      borderRadius: 4,
-                      border: "1px solid rgba(46,125,50,0.15)",
-                    }}
-                  >
-                    <CardContent>
-                      <Typography variant="h6" fontWeight={700} gutterBottom>
-                        {item.title}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        {item.description}
-                      </Typography>
-                    </CardContent>
-                  </Card>
-                ))}
-              </Stack>
-            </Grid>
-          </Grid>
-        </Container>
+    <div className="min-h-screen bg-background">
+      <Navbar />
 
-        <Box sx={{ bgcolor: "#ffffff", py: { xs: 6, md: 8 } }}>
-          <Container maxWidth="lg">
-            <Grid container spacing={3}>
-              {metrics.map((metric) => (
-                <Grid item xs={12} md={4} key={metric.label}>
-                  <Card elevation={0} sx={{ borderRadius: 4, border: "1px solid rgba(46,125,50,0.12)" }}>
-                    <CardContent sx={{ textAlign: "center" }}>
-                      <Typography variant="h4" fontWeight={700} color="success.main">
-                        {metric.value}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        {metric.label}
-                      </Typography>
-                    </CardContent>
-                  </Card>
-                </Grid>
-              ))}
-            </Grid>
-          </Container>
-        </Box>
+      <section className="relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-accent/5" />
+        <div className="container mx-auto px-4 py-20 md:py-32">
+          <div className="grid items-center gap-12 md:grid-cols-2">
+            <div className="space-y-6">
+              <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-2 text-sm font-medium text-primary">
+                <Leaf className="h-4 w-4" />
+                Blockchain cho nông nghiệp bền vững
+              </div>
+              <h1 className="text-4xl font-bold leading-tight md:text-6xl">
+                Nguồn gốc minh bạch,
+                <span className="text-primary"> giao dịch tin cậy.</span>
+              </h1>
+              <p className="max-w-xl text-lg text-muted-foreground">
+                AgroChain kết nối nông hộ, hợp tác xã và nhà thu mua trên cùng một nền tảng. Mỗi lô hàng được chứng thực và truy xuất rõ ràng ngay lập tức.
+              </p>
+              <div className="flex flex-wrap gap-4">
+                <Link to="/products">
+                  <Button size="lg" className="gap-2 bg-gradient-hero hover:opacity-90">
+                    Khám phá marketplace
+                    <ArrowRight className="h-5 w-5" />
+                  </Button>
+                </Link>
+                <Link to="/trace">
+                  <Button size="lg" variant="outline" className="gap-2">
+                    <PackageSearch className="h-5 w-5" />
+                    Truy xuất lô hàng
+                  </Button>
+                </Link>
+              </div>
+            </div>
 
-        <Container maxWidth="lg" sx={{ py: { xs: 8, md: 10 } }}>
-          <Stack spacing={3} alignItems="center" textAlign="center">
-            <Typography variant="h4" fontWeight={700}>
-              Chọn vai trò để bắt đầu
-            </Typography>
-            <Typography variant="body1" color="text.secondary" maxWidth={600}>
-              AgroChain cung cấp bảng điều khiển riêng cho từng loại người dùng. Đăng ký để tham gia vào hệ sinh thái ngay hôm nay.
-            </Typography>
-          </Stack>
-          <Grid container spacing={3} sx={{ mt: 2 }}>
-            {roleHighlights.map((role) => (
-              <Grid item xs={12} md={4} key={role.title}>
-                <Card
-                  elevation={0}
-                  sx={{
-                    borderRadius: 4,
-                    border: "1px solid rgba(46,125,50,0.12)",
-                    height: "100%",
-                    display: "flex",
-                    flexDirection: "column",
-                  }}
-                >
-                  <CardContent sx={{ display: "flex", flexDirection: "column", gap: 2, flexGrow: 1 }}>
-                    <Typography variant="h6" fontWeight={700}>
-                      {role.title}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      {role.body}
-                    </Typography>
-                    <Button
-                      component={Link}
-                      href={role.href}
-                      variant="contained"
-                      color="primary"
-                      sx={{ mt: "auto" }}
-                    >
-                      {role.cta}
-                    </Button>
-                  </CardContent>
-                </Card>
-              </Grid>
+            <div className="relative">
+              <div className="absolute -inset-4 animate-float rounded-full bg-gradient-hero opacity-20 blur-3xl" />
+              <img src={heroImage} alt="AgroChain" className="relative rounded-2xl shadow-2xl" />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="py-20 bg-secondary/30">
+        <div className="container mx-auto px-4">
+          <div className="mb-12 text-center space-y-4">
+            <h2 className="text-3xl font-bold md:text-4xl">Vì sao chọn AgroChain</h2>
+            <p className="mx-auto max-w-2xl text-muted-foreground">
+              Tạo dựng chuỗi cung ứng minh bạch, loại bỏ giấy tờ thủ công và tăng tốc độ giao dịch nông sản.
+            </p>
+          </div>
+
+          <div className="grid gap-8 md:grid-cols-3">
+            {features.map((feature) => (
+              <Card key={feature.title} className="bg-gradient-card p-6 transition-all hover:shadow-card-hover">
+                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
+                  <feature.icon className="h-6 w-6 text-primary" />
+                </div>
+                <h3 className="mb-2 text-xl font-semibold">{feature.title}</h3>
+                <p className="text-muted-foreground">{feature.description}</p>
+              </Card>
             ))}
-          </Grid>
-        </Container>
-      </Box>
-    </>
+          </div>
+        </div>
+      </section>
+
+      <section className="py-20">
+        <div className="container mx-auto px-4">
+          <div className="mb-16 text-center space-y-4">
+            <h2 className="text-3xl font-bold md:text-4xl">Bắt đầu chỉ với ba bước</h2>
+            <p className="mx-auto max-w-2xl text-muted-foreground">
+              Từ kết nối ví đến xác minh lô hàng — mọi thao tác đều gọn nhẹ và rõ ràng cho cả người bán lẫn người mua.
+            </p>
+          </div>
+
+          <div className="grid gap-8 md:grid-cols-3">
+            {steps.map((step, index) => (
+              <div key={step.number} className="relative">
+                {index < steps.length - 1 && (
+                  <div className="absolute left-[60%] top-12 hidden h-0.5 w-full bg-border md:block" />
+                )}
+                <div className="relative rounded-2xl border bg-card p-8 transition-all hover:shadow-card-hover">
+                  <div className="absolute -top-4 -left-4 flex h-12 w-12 items-center justify-center rounded-full bg-gradient-hero text-lg font-bold text-white shadow-lg">
+                    {step.number}
+                  </div>
+                  <div className="ml-8 mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
+                    <step.icon className="h-6 w-6 text-primary" />
+                  </div>
+                  <h3 className="mb-2 text-xl font-semibold">{step.title}</h3>
+                  <p className="text-muted-foreground">{step.description}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="bg-gradient-hero py-20 text-white">
+        <div className="container mx-auto px-4 text-center">
+          <h2 className="text-3xl font-bold md:text-4xl">Sẵn sàng cho mùa vụ tiếp theo?</h2>
+          <p className="mx-auto mt-4 max-w-2xl text-lg opacity-90">
+            Tham gia cùng các đối tác trên AgroChain để số hóa hoàn toàn chuỗi cung ứng nông sản của bạn.
+          </p>
+          <div className="mt-8 flex flex-wrap justify-center gap-4">
+            <Link to="/products">
+              <Button size="lg" variant="secondary" className="gap-2">
+                Bắt đầu mua bán
+                <ArrowRight className="h-5 w-5" />
+              </Button>
+            </Link>
+            <Button size="lg" variant="outline" className="border-white text-white hover:bg-white hover:text-primary">
+              Liên hệ tư vấn
+            </Button>
+          </div>
+        </div>
+      </section>
+
+      <Footer />
+    </div>
   );
 };
 
-export default HomePage;
+export default Index;

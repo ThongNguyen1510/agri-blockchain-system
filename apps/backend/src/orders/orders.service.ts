@@ -1,15 +1,21 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
-import { Order } from "@prisma/client";
+import type { Order, Product } from "@prisma/client";
 import { UserRole } from "../users/user-role.enum";
 import { PrismaService } from "../prisma/prisma.service";
 import { OrderStatus } from "./order-status.enum";
 import { CreateOrderDto } from "./dto/create-order.dto";
 
+type OrderWithProduct = Order & { product: Product | null };
+
+const orderInclude = {
+  product: true,
+} as const;
+
 @Injectable()
 export class OrdersService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async create(dto: CreateOrderDto, buyerId: number): Promise<Order> {
+  async create(dto: CreateOrderDto, buyerId: number): Promise<OrderWithProduct> {
     const product = await this.prisma.product.findUnique({ where: { id: dto.productId } });
     if (!product) {
       throw new NotFoundException("Product not found");
@@ -34,6 +40,7 @@ export class OrdersService {
           status: OrderStatus.Pending,
           shippingAddress: dto.shippingAddress ?? null,
         },
+        include: orderInclude,
       });
 
       await tx.product.update({
@@ -47,25 +54,33 @@ export class OrdersService {
     return order;
   }
 
-  async findAll(role: UserRole, userId: number): Promise<Order[]> {
+  async findAll(role: UserRole, userId: number): Promise<OrderWithProduct[]> {
     if (role === UserRole.Admin) {
-      return this.prisma.order.findMany({ orderBy: { createdAt: "desc" } });
+      return this.prisma.order.findMany({
+        orderBy: { createdAt: "desc" },
+        include: orderInclude,
+      });
     }
     if (role === UserRole.Seller) {
       return this.prisma.order.findMany({
         where: { sellerId: userId },
         orderBy: { createdAt: "desc" },
+        include: orderInclude,
       });
     }
 
     return this.prisma.order.findMany({
       where: { buyerId: userId },
       orderBy: { createdAt: "desc" },
+      include: orderInclude,
     });
   }
 
-  async findOne(id: number, userId: number, role: UserRole): Promise<Order> {
-    const order = await this.prisma.order.findUnique({ where: { id } });
+  async findOne(id: number, userId: number, role: UserRole): Promise<OrderWithProduct> {
+    const order = await this.prisma.order.findUnique({
+      where: { id },
+      include: orderInclude,
+    });
     if (!order) {
       throw new NotFoundException("Order not found");
     }

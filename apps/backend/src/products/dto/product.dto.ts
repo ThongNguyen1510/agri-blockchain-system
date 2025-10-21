@@ -1,5 +1,7 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { Product } from "@prisma/client";
+import type { Batch, Product, User } from "@prisma/client";
+import { BatchDto } from "../../batches/dto/batch.dto";
+import { UserDto } from "../../users/dto/user.dto";
 
 export class ProductDto {
   @ApiProperty()
@@ -27,9 +29,17 @@ export class ProductDto {
   sellerId!: number;
 
   @ApiProperty()
-  createdAt!: Date;
+  createdAt!: string;
 
-  static fromEntity(product: Product): ProductDto {
+  @ApiProperty({ type: () => UserDto, required: false, nullable: true })
+  seller?: UserDto | null;
+
+  @ApiProperty({ type: () => BatchDto, required: false, nullable: true })
+  batch?: BatchDto | null;
+
+  static fromEntity(
+    product: Product & { seller?: User | null; batch?: Batch | null },
+  ): ProductDto {
     const dto = new ProductDto();
     dto.id = product.id;
     dto.name = product.name;
@@ -39,7 +49,9 @@ export class ProductDto {
     dto.coverImageUrl = product.coverImageUrl;
     dto.batchId = product.batchId;
     dto.sellerId = product.sellerId;
-    dto.createdAt = product.createdAt;
+    dto.createdAt = product.createdAt.toISOString();
+    dto.seller = product.seller ? UserDto.fromEntity(product.seller) : null;
+    dto.batch = product.batch ? BatchDto.fromEntity(product.batch) : null;
     return dto;
   }
 }

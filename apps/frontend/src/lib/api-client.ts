@@ -1,0 +1,121 @@
+import type {
+  AuthResponseDto,
+  BatchDto,
+  BatchSummaryDto,
+  DashboardSummaryDto,
+  OrderDto,
+  ProductDto,
+} from "@/types/api";
+
+const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:3000";
+
+type RequestOptions = RequestInit & {
+  token?: string | null;
+  searchParams?: Record<string, string | number | undefined | null>;
+};
+
+async function apiRequest<TResponse>(path: string, options: RequestOptions = {}): Promise<TResponse> {
+  const { token, headers, body, searchParams, ...init } = options;
+
+  const url = new URL(path, API_URL);
+  if (searchParams) {
+    for (const [key, value] of Object.entries(searchParams)) {
+      if (value !== undefined && value !== null) {
+        url.searchParams.set(key, String(value));
+      }
+    }
+  }
+
+  const requestHeaders = new Headers(headers);
+  if (body && !requestHeaders.has("Content-Type")) {
+    requestHeaders.set("Content-Type", "application/json");
+  }
+  if (token) {
+    requestHeaders.set("Authorization", `Bearer ${token}`);
+  }
+
+  const response = await fetch(url, {
+    ...init,
+    headers: requestHeaders,
+    body,
+  });
+
+  const contentType = response.headers.get("Content-Type");
+  const isJson = contentType?.includes("application/json");
+
+  if (!response.ok) {
+    let message = response.statusText || "Request failed";
+    if (isJson) {
+      try {
+        const data = (await response.json()) as { message?: string | string[] };
+        if (Array.isArray(data.message)) {
+          message = data.message.join(", ");
+        } else if (data.message) {
+          message = data.message;
+        }
+      } catch {
+        // ignore parse errors
+      }
+    }
+
+    const error = new Error(message);
+    (error as Error & { status?: number }).status = response.status;
+    throw error;
+  }
+
+  if (!isJson) {
+    return undefined as TResponse;
+  }
+
+  return (await response.json()) as TResponse;
+}
+
+export const apiClient = {
+  login(email: string, password: string) {
+    return apiRequest<AuthResponseDto>("/auth/login", {
+      method: "POST",
+      body: JSON.stringify({ email, password }),
+    });
+  },
+
+  register(email: string, password: string, role: string, walletAddress: string) {
+    return apiRequest<AuthResponseDto>("/auth/register", {
+      method: "POST",
+      body: JSON.stringify({ email, password, role, walletAddress }),
+    });
+  },
+
+  getProducts(token: string) {
+    return apiRequest<ProductDto[]>("/products", { token });
+  },
+
+  getProduct(id: number, token: string) {
+    return apiRequest<ProductDto>(`/products/${id}`, { token });
+  },
+
+  getOrders(token: string) {
+    return apiRequest<OrderDto[]>("/orders", { token });
+  },
+
+  createOrder(params: { productId: number; quantity: number; shippingAddress?: string }, token: string) {
+    return apiRequest<OrderDto>("/orders", {
+      method: "POST",
+      token,
+      body: JSON.stringify(params),
+    });
+  },
+
+  getBatches(token: string) {
+    return apiRequest<BatchDto[]>("/batches", { token });
+  },
+
+  getBatchSummaries(token: string) {
+    return apiRequest<BatchSummaryDto[]>("/batches/me", { token });
+  },
+
+  getDashboardSummary(token: string) {
+    return apiRequest<DashboardSummaryDto>("/dashboard/summary", { token });
+  },
+};
+
+export type ApiClient = typeof apiClient;
