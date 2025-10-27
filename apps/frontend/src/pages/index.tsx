@@ -62,7 +62,7 @@ const Index = () => {
         <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-accent/5" />
         <div className="container mx-auto px-4 py-20 md:py-32">
           <div className="grid items-center gap-12 md:grid-cols-2">
-            <div className="space-y-6">
+            <div className="space-y-6 relative z-20">
               <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-2 text-sm font-medium text-primary">
                 <Leaf className="h-4 w-4" />
                 Blockchain cho nông nghiệp bền vững

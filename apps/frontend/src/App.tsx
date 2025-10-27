@@ -16,8 +16,10 @@ import Login from "./pages/Login";
 import SellerDashboard from "./pages/SellerDashboard";
 import SellerProducts from "./pages/SellerProducts";
 import SellerProductsNew from "./pages/SellerProductsNew";
+import SellerProductsEdit from "./pages/SellerProductsEdit";
 import SellerBatches from "./pages/SellerBatches";
 import SellerBatchesNew from "./pages/SellerBatchesNew";
+import SellerOrders from "./pages/SellerOrders";
 import UserProfile from "./pages/UserProfile";
 import DebugAuth from "./pages/DebugAuth";
 
@@ -97,6 +99,22 @@ const App = () => (
                 element={
                   <RequireAuth>
                     <SellerProductsNew />
+                  </RequireAuth>
+                }
+              />
+              <Route
+                path="/seller/products/:id/edit"
+                element={
+                  <RequireAuth>
+                    <SellerProductsEdit />
+                  </RequireAuth>
+                }
+              />
+              <Route
+                path="/seller/orders"
+                element={
+                  <RequireAuth>
+                    <SellerOrders />
                   </RequireAuth>
                 }
               />

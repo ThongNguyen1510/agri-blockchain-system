@@ -120,6 +120,19 @@ export const apiClient = {
     return apiRequest<DashboardSummaryDto>("/dashboard/summary", { token });
   },
 
+  uploadImage(file: File, token: string) {
+    const form = new FormData();
+    form.append("file", file);
+    // Note: do NOT set Content-Type; browser will set boundary automatically.
+    return apiRequest<{ url: string }>("/uploads/image", {
+      method: "POST",
+      token,
+      body: form as any,
+      // override headers: let apiRequest skip default JSON header
+      headers: undefined,
+    });
+  },
+
   // Batch APIs
   createBatch(params: { 
     batchCode: string; 
@@ -157,9 +170,61 @@ export const apiClient = {
     });
   },
 
+  updateProduct(id: number, params: Partial<{
+    name: string;
+    description?: string;
+    priceWei: string;
+    stock: number;
+    batchId: number;
+    coverImageUrl?: string;
+  }>, token: string) {
+    return apiRequest<ProductDto>(`/products/${id}`, {
+      method: "PATCH",
+      token,
+      body: JSON.stringify(params),
+    });
+  },
+
+  deleteProduct(id: number, token: string) {
+    return apiRequest<{ success: true }>(`/products/${id}`, {
+      method: "DELETE",
+      token,
+    });
+  },
+
   // Order APIs
   getOrder(id: number, token: string) {
     return apiRequest<OrderDto>(`/orders/${id}`, { token });
+  },
+
+  releaseOrder(id: number, token: string) {
+    return apiRequest<OrderDto>(`/orders/${id}/release`, {
+      method: "POST",
+      token,
+    });
+  },
+
+  cancelOrder(id: number, token: string) {
+    return apiRequest<OrderDto>(`/orders/${id}/cancel`, {
+      method: "POST",
+      token,
+    });
+  },
+
+  updateOrder(id: number, params: { quantity?: number; shippingAddress?: string }, token: string) {
+    return apiRequest<OrderDto>(`/orders/${id}`, {
+      method: "PATCH",
+      token,
+      body: JSON.stringify(params),
+    });
+  },
+
+  // Đánh dấu đơn đã ký quỹ (sau khi thanh toán on-chain thành công)
+  holdOrder(id: number, token: string) {
+    return apiRequest<OrderDto>(`/orders/${id}/hold`, {
+      method: "POST",
+      token,
+    });
   },
 
   // User APIs

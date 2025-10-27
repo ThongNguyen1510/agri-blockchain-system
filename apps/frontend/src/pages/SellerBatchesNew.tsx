@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   ArrowLeft,
   Package,
@@ -17,11 +18,14 @@ import {
   Hash,
   FileText,
   AlertCircle,
+  Link as LinkIcon,
+  Loader2,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { apiClient } from "@/lib/api-client";
 import { useAuth } from "@/context/AuthContext";
+import { anchorBatchHash } from "@/lib/blockchain";
 
 const SellerBatchesNew = () => {
   const navigate = useNavigate();
@@ -39,6 +43,8 @@ const SellerBatchesNew = () => {
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [anchorToBlockchain, setAnchorToBlockchain] = useState(true);
+  const [isAnchoring, setIsAnchoring] = useState(false);
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({
@@ -126,7 +132,25 @@ const SellerBatchesNew = () => {
       console.log("Creating batch with data:", batchData);
       console.log("Using token:", token ? "Token exists" : "No token");
       
-      await apiClient.createBatch(batchData, token);
+      // Tạo batch trong database
+      const createdBatch = await apiClient.createBatch(batchData, token);
+      
+      // Nếu chọn anchor lên blockchain
+      if (anchorToBlockchain) {
+        setIsAnchoring(true);
+        try {
+          console.log("Anchoring batch to blockchain...");
+          const tx = await anchorBatchHash(createdBatch.id, batchData);
+          
+          console.log("Blockchain transaction:", tx.hash);
+          toast.success(`Lô hàng đã được ghi lên blockchain! TX: ${tx.hash.slice(0, 10)}...`);
+        } catch (blockchainError) {
+          console.error("Blockchain error:", blockchainError);
+          toast.error("Lô hàng đã tạo thành công nhưng không thể ghi lên blockchain. Vui lòng thử lại sau.");
+        } finally {
+          setIsAnchoring(false);
+        }
+      }
       
       toast.success("Lô hàng đã được tạo thành công!");
       navigate("/seller/batches");
@@ -368,6 +392,40 @@ const SellerBatchesNew = () => {
                 </div>
               )}
 
+              {/* Blockchain Integration */}
+              <div className="space-y-4 pt-6">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="blockchain"
+                    checked={anchorToBlockchain}
+                    onCheckedChange={(checked) => setAnchorToBlockchain(checked as boolean)}
+                  />
+                  <div className="grid gap-1.5 leading-none">
+                    <label
+                      htmlFor="blockchain"
+                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                    >
+                      Ghi hash lên blockchain
+                    </label>
+                    <p className="text-xs text-muted-foreground">
+                      Đảm bảo tính minh bạch và không thể sửa đổi dữ liệu lô hàng
+                    </p>
+                  </div>
+                </div>
+                
+                {anchorToBlockchain && (
+                  <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <LinkIcon className="h-5 w-5 text-blue-600" />
+                      <span className="font-semibold text-blue-800">Blockchain Integration</span>
+                    </div>
+                    <p className="text-sm text-blue-700">
+                      Hash của lô hàng sẽ được ghi lên smart contract để đảm bảo tính toàn vẹn dữ liệu.
+                    </p>
+                  </div>
+                )}
+              </div>
+
               {/* Submit Buttons */}
               <div className="flex gap-4 pt-6">
                 <Link to="/seller/batches" className="flex-1">
@@ -378,12 +436,17 @@ const SellerBatchesNew = () => {
                 <Button 
                   type="submit" 
                   className="flex-1 gap-2 bg-gradient-hero hover:opacity-90"
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || isAnchoring}
                 >
                   {isSubmitting ? (
                     <>
                       <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
                       Đang tạo...
+                    </>
+                  ) : isAnchoring ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Đang ghi blockchain...
                     </>
                   ) : (
                     <>

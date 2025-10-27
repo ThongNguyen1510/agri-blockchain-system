@@ -1,18 +1,24 @@
 import { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ExternalLink, Package } from "lucide-react";
+import { ExternalLink, Package, CheckCircle, XCircle, Loader2, Save, Wallet } from "lucide-react";
 import { apiClient } from "@/lib/api-client";
 import { useAuth } from "@/context/AuthContext";
 import type { OrderDto, OrderStatus } from "@/types/api";
 import { formatDate, formatWeiToEth } from "@/lib/utils";
+import { toast } from "sonner";
+import addressJson from "@/contracts/agro-escrow.address.json";
+import abiJson from "@/contracts/agro-escrow.abi.json";
+import { ethers } from "ethers";
 
 const STATUS_STYLES: Record<string, string> = {
   HELD: "bg-yellow-500/10 text-yellow-600 border-yellow-500/20",
@@ -35,8 +41,11 @@ const STATUS_LABELS: Record<string, string> = {
 const normalizeStatus = (status: OrderStatus): string => status.toString().toUpperCase();
 
 const Orders = () => {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
+  const queryClient = useQueryClient();
   const [statusFilter, setStatusFilter] = useState("all");
+  const [editQty, setEditQty] = useState<Record<number, string>>({});
+  const [payingId, setPayingId] = useState<number | null>(null);
 
   const {
     data: orders,
@@ -47,6 +56,73 @@ const Orders = () => {
     queryFn: () => apiClient.getOrders(token!),
     enabled: Boolean(token),
     staleTime: 1000 * 30,
+  });
+
+  // Gọi MetaMask để thanh toán ký quỹ vào contract AgroEscrow
+  const payEscrow = async (order: OrderDto) => {
+    try {
+      if (!window.ethereum) {
+        toast.error("Không tìm thấy ví (MetaMask)");
+        return;
+      }
+      setPayingId(order.id);
+      // Yêu cầu MetaMask cấp quyền
+      await window.ethereum.request?.({ method: "eth_requestAccounts" });
+      const provider = new ethers.BrowserProvider(window.ethereum as any);
+      const signer = await provider.getSigner();
+
+      const contract = new ethers.Contract(addressJson.address, abiJson as any, signer);
+      // productId trên chain dạng bytes32: ta encode từ productId số nguyên
+      const productIdBytes = ethers.encodeBytes32String(String(order.productId));
+      // TODO: thay signer.address bằng địa chỉ ví của Seller từ backend khi API trả về
+      const tx = await contract.createOrder(signer.address, productIdBytes, {
+        value: order.totalWei,
+      });
+      await tx.wait();
+
+      // Sau khi on-chain thành công, gọi API để đổi trạng thái PENDING -> IN_ESCROW
+      await apiClient.holdOrder(order.id, token!);
+      await queryClient.invalidateQueries({ queryKey: ["orders"] });
+      toast.success("Đã thanh toán ký quỹ thành công");
+    } catch (e: any) {
+      toast.error(e?.message ?? "Thanh toán thất bại");
+    } finally {
+      setPayingId(null);
+    }
+  };
+
+  const updateOrderMutation = useMutation({
+    mutationFn: ({ id, quantity }: { id: number; quantity: number }) =>
+      apiClient.updateOrder(id, { quantity }, token!),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
+      toast.success("Đã cập nhật số lượng");
+    },
+    onError: (error: Error) => {
+      toast.error(`Lỗi: ${error.message}`);
+    },
+  });
+
+  const releaseOrderMutation = useMutation({
+    mutationFn: (orderId: number) => apiClient.releaseOrder(orderId, token!),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
+      toast.success("Đã xác nhận giao hàng thành công!");
+    },
+    onError: (error: Error) => {
+      toast.error(`Lỗi: ${error.message}`);
+    },
+  });
+
+  const cancelOrderMutation = useMutation({
+    mutationFn: (orderId: number) => apiClient.cancelOrder(orderId, token!),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
+      toast.success("Đã hủy đơn hàng thành công!");
+    },
+    onError: (error: Error) => {
+      toast.error(`Lỗi: ${error.message}`);
+    },
   });
 
   const statuses = useMemo(() => {
@@ -115,6 +191,7 @@ const Orders = () => {
               <TableHead>Trạng thái</TableHead>
               <TableHead>Thời gian</TableHead>
               <TableHead>Mã sản phẩm</TableHead>
+              {(user?.role === "Seller" || user?.role === "Buyer") && <TableHead>Thao tác</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -132,7 +209,21 @@ const Orders = () => {
                       {productName}
                     </div>
                   </TableCell>
-                  <TableCell className="text-right">{order.quantity}</TableCell>
+                  <TableCell className="text-right">
+                    {user?.role === "Buyer" && normalizeStatus(order.status) === "PENDING" ? (
+                      <div className="flex items-center justify-end gap-2">
+                        <Input
+                          type="number"
+                          min={1}
+                          className="w-24 h-8"
+                          value={editQty[order.id] ?? String(order.quantity)}
+                          onChange={(e) => setEditQty((prev) => ({ ...prev, [order.id]: e.target.value }))}
+                        />
+                      </div>
+                    ) : (
+                      order.quantity
+                    )}
+                  </TableCell>
                   <TableCell className="text-right font-semibold text-primary">
                     {formatWeiToEth(order.totalWei)} ETH
                   </TableCell>
@@ -151,6 +242,104 @@ const Orders = () => {
                       <ExternalLink className="h-3 w-3" />
                     </Link>
                   </TableCell>
+                  {(user?.role === "Seller" || user?.role === "Buyer") && (
+                    <TableCell>
+                      <div className="flex gap-2 justify-end">
+                        {user?.role === "Seller" && normalised === "IN_ESCROW" && (
+                          <Button
+                            size="sm"
+                            onClick={() => releaseOrderMutation.mutate(order.id)}
+                            disabled={releaseOrderMutation.isPending}
+                            className="bg-green-600 hover:bg-green-700"
+                          >
+                            {releaseOrderMutation.isPending ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <CheckCircle className="h-4 w-4" />
+                            )}
+                            <span className="ml-1">Xác nhận</span>
+                          </Button>
+                        )}
+
+                        {user?.role === "Buyer" && normalised === "PENDING" && (
+                          <>
+                            {/* Nút thanh toán ký quỹ: gọi MetaMask + contract, rồi cập nhật trạng thái */}
+                            <Button
+                              size="sm"
+                              variant="default"
+                              onClick={() => payEscrow(order)}
+                              disabled={payingId === order.id}
+                              className="bg-amber-600 hover:bg-amber-700"
+                            >
+                              {payingId === order.id ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <Wallet className="h-4 w-4" />
+                              )}
+                              <span className="ml-1">Thanh toán ký quỹ</span>
+                            </Button>
+
+                            <Button
+                              size="sm"
+                              onClick={() => {
+                                const val = parseInt(editQty[order.id] ?? String(order.quantity));
+                                if (!Number.isFinite(val) || val < 1) {
+                                  toast.error("Số lượng không hợp lệ");
+                                  return;
+                                }
+                                updateOrderMutation.mutate({ id: order.id, quantity: val });
+                              }}
+                              disabled={updateOrderMutation.isPending}
+                              className="bg-primary hover:bg-primary/90"
+                            >
+                              {updateOrderMutation.isPending ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <Save className="h-4 w-4" />
+                              )}
+                              <span className="ml-1">Lưu</span>
+                            </Button>
+
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                const confirmed = window.confirm("Bạn muốn hủy (xóa) đơn hàng này?");
+                                if (!confirmed) return;
+                                cancelOrderMutation.mutate(order.id);
+                              }}
+                              disabled={cancelOrderMutation.isPending}
+                              className="border-red-500 text-red-600 hover:bg-red-50"
+                            >
+                              {cancelOrderMutation.isPending ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <XCircle className="h-4 w-4" />
+                              )}
+                              <span className="ml-1">Hủy</span>
+                            </Button>
+                          </>
+                        )}
+
+                        {user?.role === "Seller" && (normalised === "IN_ESCROW" || normalised === "PENDING") && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => cancelOrderMutation.mutate(order.id)}
+                            disabled={cancelOrderMutation.isPending}
+                            className="border-red-500 text-red-600 hover:bg-red-50"
+                          >
+                            {cancelOrderMutation.isPending ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <XCircle className="h-4 w-4" />
+                            )}
+                            <span className="ml-1">Hủy</span>
+                          </Button>
+                        )}
+                      </div>
+                    </TableCell>
+                  )}
                 </TableRow>
               );
             })}

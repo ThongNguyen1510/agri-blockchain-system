@@ -1,4 +1,4 @@
-﻿import { Module } from "@nestjs/common";
+import { Module } from "@nestjs/common";
 import { APP_GUARD } from "@nestjs/core";
 import { ConfigModule } from "@nestjs/config";
 import { AuthModule } from "./auth/auth.module";
@@ -11,6 +11,7 @@ import { BatchesModule } from "./batches/batches.module";
 import { ProductsModule } from "./products/products.module";
 import { OrdersModule } from "./orders/orders.module";
 import { DashboardModule } from "./dashboard/dashboard.module";
+import { UploadsModule } from "./uploads/uploads.module";
 
 @Module({
   imports: [
@@ -22,14 +23,16 @@ import { DashboardModule } from "./dashboard/dashboard.module";
     ProductsModule,
     OrdersModule,
     DashboardModule,
+    UploadsModule,
   ],
   controllers: [HealthController],
   providers: [
-    // Ensure authentication guard runs BEFORE role guard
+    // Apply JwtAuthGuard globally FIRST so request.user is populated
     {
       provide: APP_GUARD,
       useClass: JwtAuthGuard,
     },
+    // Then apply RolesGuard to enforce @Roles() metadata
     {
       provide: APP_GUARD,
       useClass: RolesGuard,

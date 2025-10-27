@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -21,11 +21,28 @@ import { Link } from "react-router-dom";
 import { apiClient } from "@/lib/api-client";
 import { useAuth } from "@/context/AuthContext";
 import type { ProductDto } from "@/types/api";
+import { toast } from "sonner";
 
 const SellerProducts = () => {
   const { token, user } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const queryClient = useQueryClient();
+
+  const deleteMutation = useMutation({
+    mutationFn: async (productId: number) => {
+      if (!token) throw new Error("Chưa đăng nhập");
+      return apiClient.deleteProduct(productId, token);
+    },
+    onSuccess: () => {
+      toast.success("Đã xóa sản phẩm");
+      void queryClient.invalidateQueries({ queryKey: ["products", "seller"] });
+    },
+    onError: (error: unknown) => {
+      const message = error instanceof Error ? error.message : "Xóa sản phẩm thất bại";
+      toast.error(message);
+    },
+  });
 
   const {
     data: products,
@@ -283,11 +300,23 @@ const SellerProducts = () => {
                         Xem
                       </Button>
                     </Link>
-                    <Button variant="outline" size="sm" className="gap-2">
-                      <Edit className="h-4 w-4" />
-                      Sửa
-                    </Button>
-                    <Button variant="outline" size="sm" className="gap-2 text-destructive hover:text-destructive">
+                    <Link to={`/seller/products/${product.id}/edit`}>
+                      <Button variant="outline" size="sm" className="gap-2">
+                        <Edit className="h-4 w-4" />
+                        Sửa
+                      </Button>
+                    </Link>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-2 text-destructive hover:text-destructive"
+                      onClick={() => {
+                        const confirmed = window.confirm("Bạn có chắc muốn xóa sản phẩm này?");
+                        if (!confirmed) return;
+                        deleteMutation.mutate(product.id);
+                      }}
+                      disabled={deleteMutation.isPending}
+                    >
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>

@@ -38,6 +38,7 @@ const SellerProductsNew = () => {
   });
   
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
 
   // Get available batches for the current seller
   const {
@@ -59,6 +60,29 @@ const SellerProductsNew = () => {
       ...prev,
       [field]: value,
     }));
+  };
+
+  const handleFileChange = async (file?: File) => {
+    if (!file) return;
+    if (!token) {
+      toast.error("Vui lòng đăng nhập để tải ảnh");
+      return;
+    }
+    if (!file.type.startsWith("image/")) {
+      toast.error("Vui lòng chọn tệp hình ảnh");
+      return;
+    }
+    try {
+      setIsUploading(true);
+      const { url } = await apiClient.uploadImage(file, token);
+      setFormData(prev => ({ ...prev, coverImageUrl: url }));
+      toast.success("Đã tải ảnh lên");
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Tải ảnh thất bại";
+      toast.error(msg);
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const handlePriceChange = (value: string) => {
@@ -311,9 +335,18 @@ const SellerProductsNew = () => {
                 </div>
               </div>
 
-              {/* Cover Image URL */}
+              {/* Cover Image */}
               <div className="space-y-2">
-                <Label htmlFor="coverImageUrl">URL hình ảnh bìa</Label>
+                <Label>Hình ảnh bìa</Label>
+                {formData.coverImageUrl && (
+                  <div className="mb-2">
+                    <img src={formData.coverImageUrl} alt="preview" className="h-32 w-32 object-cover rounded" />
+                  </div>
+                )}
+                <div className="flex gap-3 items-center">
+                  <Input type="file" accept="image/*" onChange={(e) => handleFileChange(e.target.files?.[0])} />
+                  <span className="text-sm text-muted-foreground">hoặc nhập URL</span>
+                </div>
                 <Input
                   id="coverImageUrl"
                   type="url"
@@ -321,9 +354,7 @@ const SellerProductsNew = () => {
                   value={formData.coverImageUrl}
                   onChange={(e) => handleInputChange("coverImageUrl", e.target.value)}
                 />
-                <p className="text-xs text-muted-foreground">
-                  Link đến hình ảnh sản phẩm (tùy chọn)
-                </p>
+                {isUploading && <p className="text-xs text-muted-foreground">Đang tải ảnh...</p>}
               </div>
 
               {/* Preview */}

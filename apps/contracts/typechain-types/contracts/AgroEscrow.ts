@@ -24,6 +24,20 @@ import type {
 } from "../common";
 
 export declare namespace AgroEscrow {
+  export type BatchStruct = {
+    batchId: BigNumberish;
+    hash: BytesLike;
+    creator: AddressLike;
+    timestamp: BigNumberish;
+  };
+
+  export type BatchStructOutput = [
+    batchId: bigint,
+    hash: string,
+    creator: string,
+    timestamp: bigint
+  ] & { batchId: bigint; hash: string; creator: string; timestamp: bigint };
+
   export type OrderStruct = {
     buyer: AddressLike;
     seller: AddressLike;
@@ -50,8 +64,11 @@ export declare namespace AgroEscrow {
 export interface AgroEscrowInterface extends Interface {
   getFunction(
     nameOrSignature:
+      | "anchorBatchHash"
       | "createOrder"
+      | "getBatch"
       | "getOrder"
+      | "isBatchAnchored"
       | "nextOrderId"
       | "owner"
       | "refundOrder"
@@ -62,6 +79,7 @@ export interface AgroEscrowInterface extends Interface {
 
   getEvent(
     nameOrSignatureOrTopic:
+      | "BatchHashAnchored"
       | "OrderCreated"
       | "OrderRefunded"
       | "OrderReleased"
@@ -69,11 +87,23 @@ export interface AgroEscrowInterface extends Interface {
   ): EventFragment;
 
   encodeFunctionData(
+    functionFragment: "anchorBatchHash",
+    values: [BigNumberish, BytesLike]
+  ): string;
+  encodeFunctionData(
     functionFragment: "createOrder",
     values: [AddressLike, BytesLike]
   ): string;
   encodeFunctionData(
+    functionFragment: "getBatch",
+    values: [BigNumberish]
+  ): string;
+  encodeFunctionData(
     functionFragment: "getOrder",
+    values: [BigNumberish]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "isBatchAnchored",
     values: [BigNumberish]
   ): string;
   encodeFunctionData(
@@ -99,10 +129,19 @@ export interface AgroEscrowInterface extends Interface {
   ): string;
 
   decodeFunctionResult(
+    functionFragment: "anchorBatchHash",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
     functionFragment: "createOrder",
     data: BytesLike
   ): Result;
+  decodeFunctionResult(functionFragment: "getBatch", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "getOrder", data: BytesLike): Result;
+  decodeFunctionResult(
+    functionFragment: "isBatchAnchored",
+    data: BytesLike
+  ): Result;
   decodeFunctionResult(
     functionFragment: "nextOrderId",
     data: BytesLike
@@ -124,6 +163,24 @@ export interface AgroEscrowInterface extends Interface {
     functionFragment: "transferOwnership",
     data: BytesLike
   ): Result;
+}
+
+export namespace BatchHashAnchoredEvent {
+  export type InputTuple = [
+    batchId: BigNumberish,
+    hash: BytesLike,
+    creator: AddressLike
+  ];
+  export type OutputTuple = [batchId: bigint, hash: string, creator: string];
+  export interface OutputObject {
+    batchId: bigint;
+    hash: string;
+    creator: string;
+  }
+  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
+  export type Filter = TypedDeferredTopicFilter<Event>;
+  export type Log = TypedEventLog<Event>;
+  export type LogDescription = TypedLogDescription<Event>;
 }
 
 export namespace OrderCreatedEvent {
@@ -234,15 +291,33 @@ export interface AgroEscrow extends BaseContract {
     event?: TCEvent
   ): Promise<this>;
 
+  anchorBatchHash: TypedContractMethod<
+    [batchId: BigNumberish, hash: BytesLike],
+    [void],
+    "nonpayable"
+  >;
+
   createOrder: TypedContractMethod<
     [seller: AddressLike, productId: BytesLike],
     [bigint],
     "payable"
   >;
 
+  getBatch: TypedContractMethod<
+    [batchId: BigNumberish],
+    [AgroEscrow.BatchStructOutput],
+    "view"
+  >;
+
   getOrder: TypedContractMethod<
     [orderId: BigNumberish],
     [AgroEscrow.OrderStructOutput],
+    "view"
+  >;
+
+  isBatchAnchored: TypedContractMethod<
+    [batchId: BigNumberish],
+    [boolean],
     "view"
   >;
 
@@ -275,11 +350,25 @@ export interface AgroEscrow extends BaseContract {
   ): T;
 
   getFunction(
+    nameOrSignature: "anchorBatchHash"
+  ): TypedContractMethod<
+    [batchId: BigNumberish, hash: BytesLike],
+    [void],
+    "nonpayable"
+  >;
+  getFunction(
     nameOrSignature: "createOrder"
   ): TypedContractMethod<
     [seller: AddressLike, productId: BytesLike],
     [bigint],
     "payable"
+  >;
+  getFunction(
+    nameOrSignature: "getBatch"
+  ): TypedContractMethod<
+    [batchId: BigNumberish],
+    [AgroEscrow.BatchStructOutput],
+    "view"
   >;
   getFunction(
     nameOrSignature: "getOrder"
@@ -288,6 +377,9 @@ export interface AgroEscrow extends BaseContract {
     [AgroEscrow.OrderStructOutput],
     "view"
   >;
+  getFunction(
+    nameOrSignature: "isBatchAnchored"
+  ): TypedContractMethod<[batchId: BigNumberish], [boolean], "view">;
   getFunction(
     nameOrSignature: "nextOrderId"
   ): TypedContractMethod<[], [bigint], "view">;
@@ -307,6 +399,13 @@ export interface AgroEscrow extends BaseContract {
     nameOrSignature: "transferOwnership"
   ): TypedContractMethod<[newOwner: AddressLike], [void], "nonpayable">;
 
+  getEvent(
+    key: "BatchHashAnchored"
+  ): TypedContractEvent<
+    BatchHashAnchoredEvent.InputTuple,
+    BatchHashAnchoredEvent.OutputTuple,
+    BatchHashAnchoredEvent.OutputObject
+  >;
   getEvent(
     key: "OrderCreated"
   ): TypedContractEvent<
@@ -337,6 +436,17 @@ export interface AgroEscrow extends BaseContract {
   >;
 
   filters: {
+    "BatchHashAnchored(uint256,bytes32,address)": TypedContractEvent<
+      BatchHashAnchoredEvent.InputTuple,
+      BatchHashAnchoredEvent.OutputTuple,
+      BatchHashAnchoredEvent.OutputObject
+    >;
+    BatchHashAnchored: TypedContractEvent<
+      BatchHashAnchoredEvent.InputTuple,
+      BatchHashAnchoredEvent.OutputTuple,
+      BatchHashAnchoredEvent.OutputObject
+    >;
+
     "OrderCreated(uint256,address,address,bytes32,uint256)": TypedContractEvent<
       OrderCreatedEvent.InputTuple,
       OrderCreatedEvent.OutputTuple,

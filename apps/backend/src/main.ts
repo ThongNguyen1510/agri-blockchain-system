@@ -2,6 +2,8 @@ import { ValidationPipe } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import { AppModule } from "./app.module";
+import * as express from "express";
+import { join } from "path";
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -33,6 +35,9 @@ async function bootstrap() {
       transformOptions: { enableImplicitConversion: true },
     }),
   );
+
+  // Serve uploaded files
+  app.use("/uploads", express.static(join(process.cwd(), "uploads")));
 
   const config = new DocumentBuilder()
     .setTitle("AgroChain API")
