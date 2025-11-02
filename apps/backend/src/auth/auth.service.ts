@@ -1,13 +1,18 @@
-import { Injectable, UnauthorizedException } from "@nestjs/common";
+import { Injectable, NotFoundException, UnauthorizedException } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
 import { User } from "@prisma/client";
 import * as bcrypt from "bcryptjs";
+import { randomBytes } from "crypto";
+import { PrismaService } from "../prisma/prisma.service";
+import { EmailService } from "../email/email.service";
 import { UsersService } from "../users/users.service";
 import { UserRole } from "../users/user-role.enum";
 import { UserDto } from "../users/dto/user.dto";
 import { LoginDto } from "./dto/login.dto";
 import { RegisterDto } from "./dto/register.dto";
 import { AuthResponseDto } from "./dto/auth-response.dto";
+import { ForgotPasswordDto } from "./dto/forgot-password.dto";
+import { ResetPasswordDto } from "./dto/reset-password.dto";
 import { JwtPayload } from "./jwt-payload.interface";
 
 @Injectable()
@@ -15,6 +20,8 @@ export class AuthService {
   constructor(
     private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
+    private readonly prisma: PrismaService,
+    private readonly emailService: EmailService,
   ) {}
 
   async register(dto: RegisterDto): Promise<AuthResponseDto> {
@@ -64,6 +71,70 @@ export class AuthService {
     response.accessToken = this.jwtService.sign(payload);
     response.user = UserDto.fromEntity(user);
     return response;
+  }
+
+  async forgotPassword(dto: ForgotPasswordDto): Promise<{ message: string }> {
+    const user = await this.usersService.findByEmail(dto.email);
+    if (!user) {
+      // Không tiết lộ email có tồn tại hay không (security best practice)
+      return { message: "Nếu email tồn tại, bạn sẽ nhận được hướng dẫn đặt lại mật khẩu." };
+    }
+
+    // Xóa các token cũ chưa dùng của user này
+    await this.prisma.passwordResetToken.deleteMany({
+      where: {
+        userId: user.id,
+        usedAt: null,
+      },
+    });
+
+    // Tạo token ngẫu nhiên
+    const token = randomBytes(32).toString("hex");
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 phút
+
+    // Lưu token vào database
+    await this.prisma.passwordResetToken.create({
+      data: {
+        userId: user.id,
+        token,
+        expiresAt,
+      },
+    });
+
+    // Gửi email
+    await this.emailService.sendPasswordResetEmail(user.email, token);
+
+    return {
+      message: "Nếu email tồn tại, bạn sẽ nhận được hướng dẫn đặt lại mật khẩu.",
+    };
+  }
+
+  async resetPassword(dto: ResetPasswordDto): Promise<{ message: string }> {
+    // Tìm token trong database
+    const tokenRecord = await this.prisma.passwordResetToken.findUnique({
+      where: { token: dto.token },
+      include: { user: true },
+    });
+
+    if (!tokenRecord || tokenRecord.usedAt) {
+      throw new UnauthorizedException("Token không hợp lệ hoặc đã được sử dụng.");
+    }
+
+    if (new Date() > tokenRecord.expiresAt) {
+      throw new UnauthorizedException("Token đã hết hạn.");
+    }
+
+    // Cập nhật mật khẩu
+    const newPasswordHash = await bcrypt.hash(dto.newPassword, 10);
+    await this.usersService.updatePassword(tokenRecord.userId, newPasswordHash);
+
+    // Đánh dấu token đã sử dụng
+    await this.prisma.passwordResetToken.update({
+      where: { id: tokenRecord.id },
+      data: { usedAt: new Date() },
+    });
+
+    return { message: "Mật khẩu đã được đặt lại thành công." };
   }
 
   private assertRoleAllowed(role: UserRole): void {

@@ -15,11 +15,12 @@ model User {
   walletAddress String      @map("WalletAddress") @db.NVarChar(100)
   createdAt     DateTime    @default(now()) @map("CreatedAt") @db.DateTime2
 
-  batches       Batch[]     @relation("UserBatches")
-  products      Product[]   @relation("UserProducts")
-  buyerOrders   Order[]     @relation("OrderBuyer")
-  sellerOrders  Order[]     @relation("OrderSeller")
-  auditLogs     AuditLog[]
+  batches            Batch[]                @relation("UserBatches")
+  products           Product[]              @relation("UserProducts")
+  buyerOrders        Order[]                @relation("OrderBuyer")
+  sellerOrders       Order[]                @relation("OrderSeller")
+  auditLogs          AuditLog[]
+  passwordResetTokens PasswordResetToken[]
 
   @@map("User")
 }
@@ -89,4 +90,17 @@ model AuditLog {
   actor User @relation(fields: [actorId], references: [id], onUpdate: NoAction, onDelete: NoAction)
 
   @@map("AuditLog")
+}
+
+model PasswordResetToken {
+  id        Int       @id @default(autoincrement()) @map("Id") @db.Int
+  userId    Int       @map("UserId") @db.Int
+  token     String    @unique @map("Token") @db.NVarChar(255)
+  expiresAt DateTime  @map("ExpiresAt") @db.DateTime2
+  usedAt    DateTime? @map("UsedAt") @db.DateTime2
+  createdAt DateTime  @default(now()) @map("CreatedAt") @db.DateTime2
+
+  user User @relation(fields: [userId], references: [id], onUpdate: NoAction, onDelete: Cascade)
+
+  @@map("PasswordResetToken")
 }

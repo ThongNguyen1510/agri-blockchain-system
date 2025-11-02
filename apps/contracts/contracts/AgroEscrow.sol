@@ -18,12 +18,21 @@ contract AgroEscrow is Ownable {
         OrderStatus status;
     }
 
+    struct Batch {
+        uint256 batchId;
+        bytes32 hash;
+        address creator;
+        uint256 timestamp;
+    }
+
     uint256 private _nextOrderId;
     mapping(uint256 => Order) private _orders;
+    mapping(uint256 => Batch) private _batches;
 
     event OrderCreated(uint256 indexed orderId, address indexed buyer, address indexed seller, bytes32 productId, uint256 amount);
     event OrderReleased(uint256 indexed orderId);
     event OrderRefunded(uint256 indexed orderId);
+    event BatchHashAnchored(uint256 indexed batchId, bytes32 indexed hash, address indexed creator);
 
     constructor(address initialOwner) Ownable(initialOwner) {
         require(initialOwner != address(0), "Owner required");
@@ -75,5 +84,27 @@ contract AgroEscrow is Ownable {
 
     function nextOrderId() external view returns (uint256) {
         return _nextOrderId + 1;
+    }
+
+    function anchorBatchHash(uint256 batchId, bytes32 hash) external {
+        require(hash != bytes32(0), "Invalid hash");
+        require(_batches[batchId].hash == bytes32(0), "Batch already anchored");
+
+        _batches[batchId] = Batch({
+            batchId: batchId,
+            hash: hash,
+            creator: msg.sender,
+            timestamp: block.timestamp
+        });
+
+        emit BatchHashAnchored(batchId, hash, msg.sender);
+    }
+
+    function getBatch(uint256 batchId) external view returns (Batch memory) {
+        return _batches[batchId];
+    }
+
+    function isBatchAnchored(uint256 batchId) external view returns (bool) {
+        return _batches[batchId].hash != bytes32(0);
     }
 }

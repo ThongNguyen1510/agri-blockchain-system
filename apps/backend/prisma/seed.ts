@@ -24,6 +24,12 @@ async function main() {
       role: UserRole.Buyer,
       walletAddress: "0xBuyerDemo000000000000000000000000000000",
     },
+    {
+      email: "testseller1@gmail.com",
+      password: "password123",
+      role: UserRole.Seller,
+      walletAddress: "0xTestSeller1000000000000000000000000000000",
+    },
   ];
 
   for (const user of users) {
