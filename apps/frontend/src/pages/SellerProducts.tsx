@@ -29,6 +29,22 @@ const SellerProducts = () => {
   const [statusFilter, setStatusFilter] = useState("all");
   const queryClient = useQueryClient();
 
+  const stopSellingMutation = useMutation({
+    mutationFn: async (productId: number) => {
+      if (!token) throw new Error("Chưa đăng nhập");
+      return apiClient.updateProduct(productId, { stock: 0 }, token);
+    },
+    onSuccess: () => {
+      toast.success("Đã ngừng bán (tồn kho = 0)");
+      void queryClient.invalidateQueries({ queryKey: ["products", "seller"] });
+      void queryClient.invalidateQueries({ queryKey: ["products"] });
+    },
+    onError: (error: unknown) => {
+      const message = error instanceof Error ? error.message : "Cập nhật thất bại";
+      toast.error(message);
+    },
+  });
+
   const deleteMutation = useMutation({
     mutationFn: async (productId: number) => {
       if (!token) throw new Error("Chưa đăng nhập");
@@ -257,42 +273,32 @@ const SellerProducts = () => {
             {filteredProducts.map((product) => (
               <Card key={product.id} className="overflow-hidden transition-all hover:shadow-card-hover">
                 {product.coverImageUrl ? (
-                  <img
-                    src={product.coverImageUrl}
-                    alt={product.name}
-                    className="w-full h-48 object-cover"
-                  />
+                  <img src={product.coverImageUrl} alt={product.name} className="w-full h-48 object-cover" />
                 ) : (
                   <div className="w-full h-48 bg-muted flex items-center justify-center">
                     <Package className="h-12 w-12 text-muted-foreground opacity-50" />
                   </div>
                 )}
-                
+
                 <div className="p-6">
                   <div className="flex items-start justify-between mb-2">
                     <h3 className="font-semibold text-lg line-clamp-2">{product.name}</h3>
                     {getStatusBadge(product)}
                   </div>
-                  
                   <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
                     {product.description || "Không có mô tả"}
                   </p>
-                  
                   <div className="space-y-2 mb-4">
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Giá:</span>
                       <span className="font-semibold">{formatPrice(product.priceWei)}</span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Tồn kho:</span>
-                      <span className="font-semibold">{product.stock} sản phẩm</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Mã lô:</span>
                       <span className="font-mono text-xs">{product.batch?.batchCode || "N/A"}</span>
                     </div>
                   </div>
-                  
+
                   <div className="flex gap-2">
                     <Link to={`/product/${product.id}`} className="flex-1">
                       <Button variant="outline" size="sm" className="w-full gap-2">
@@ -306,6 +312,21 @@ const SellerProducts = () => {
                         Sửa
                       </Button>
                     </Link>
+                    {product.stock > 0 && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-2"
+                        onClick={() => {
+                          const confirmed = window.confirm("Ngừng bán sản phẩm này? Tồn kho sẽ đặt về 0.");
+                          if (!confirmed) return;
+                          stopSellingMutation.mutate(product.id);
+                        }}
+                        disabled={stopSellingMutation.isPending}
+                      >
+                        Ngừng bán
+                      </Button>
+                    )}
                     <Button
                       variant="outline"
                       size="sm"
@@ -325,6 +346,7 @@ const SellerProducts = () => {
             ))}
           </div>
         )}
+
       </div>
 
       <Footer />

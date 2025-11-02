@@ -108,7 +108,7 @@ const SellerProductsEdit = () => {
       const payload: any = {};
       if (formData.name.trim()) payload.name = formData.name.trim();
       if (formData.description.trim()) payload.description = formData.description.trim();
-      if (formData.priceWei) payload.priceWei = formData.priceWei;
+      if (formData.priceWei) payload.priceWei = String(formData.priceWei);
       if (formData.stock) payload.stock = parseInt(formData.stock);
       if (formData.batchId) payload.batchId = parseInt(formData.batchId);
       if (formData.coverImageUrl.trim()) payload.coverImageUrl = formData.coverImageUrl.trim();

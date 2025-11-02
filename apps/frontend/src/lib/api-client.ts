@@ -88,6 +88,20 @@ export const apiClient = {
     });
   },
 
+  forgotPassword(email: string) {
+    return apiRequest<{ message: string }>("/auth/forgot-password", {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    });
+  },
+
+  resetPassword(token: string, newPassword: string) {
+    return apiRequest<{ message: string }>("/auth/reset-password", {
+      method: "POST",
+      body: JSON.stringify({ token, newPassword }),
+    });
+  },
+
   getProducts(token: string) {
     return apiRequest<ProductDto[]>("/products", { token });
   },
@@ -154,6 +168,21 @@ export const apiClient = {
     return apiRequest<BatchDto>(`/batches/${id}`, { token });
   },
 
+  updateBatch(id: number, params: Partial<{
+    farmName: string;
+    harvestDate: string;
+    variety: string;
+    notes: string;
+    ipfsCid: string;
+    hashSha256: string;
+  }>, token: string) {
+    return apiRequest<BatchDto>(`/batches/${id}`, {
+      method: "PATCH",
+      token,
+      body: JSON.stringify(params),
+    });
+  },
+
   // Product APIs
   createProduct(params: {
     name: string;
@@ -197,10 +226,14 @@ export const apiClient = {
     return apiRequest<OrderDto>(`/orders/${id}`, { token });
   },
 
-  releaseOrder(id: number, token: string) {
+  releaseOrder(id: number, token: string, connectedWallet?: string) {
+    const headers: HeadersInit = connectedWallet
+      ? { "x-wallet-address": connectedWallet }
+      : undefined as any;
     return apiRequest<OrderDto>(`/orders/${id}/release`, {
       method: "POST",
       token,
+      headers,
     });
   },
 
@@ -220,16 +253,38 @@ export const apiClient = {
   },
 
   // Đánh dấu đơn đã ký quỹ (sau khi thanh toán on-chain thành công)
-  holdOrder(id: number, token: string) {
+  // Gửi kèm x-wallet-address để backend đối chiếu ví đang kết nối
+  holdOrder(id: number, token: string, connectedWallet?: string) {
+    const headers: HeadersInit = connectedWallet
+      ? { "x-wallet-address": connectedWallet }
+      : undefined as any;
     return apiRequest<OrderDto>(`/orders/${id}/hold`, {
       method: "POST",
       token,
+      headers,
     });
   },
 
   // User APIs
   getProfile(token: string) {
     return apiRequest<import("@/types/api").UserDto>("/users/me", { token });
+  },
+
+  // Cấp nonce để ký xác minh đổi ví
+  walletUpdateNonce(token: string) {
+    return apiRequest<{ nonce: string }>("/users/wallet-update-nonce", {
+      method: "POST",
+      token,
+    });
+  },
+
+  // Đổi ví: gửi newWallet và chữ ký từ ví cũ
+  updateWallet(newWallet: string, signature: string, token: string) {
+    return apiRequest<import("@/types/api").UserDto>("/users/update-wallet", {
+      method: "POST",
+      token,
+      body: JSON.stringify({ newWallet, signature }),
+    });
   },
 };
 

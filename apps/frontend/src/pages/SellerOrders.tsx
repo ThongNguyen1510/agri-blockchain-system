@@ -14,6 +14,7 @@ import { useAuth } from "@/context/AuthContext";
 import type { OrderDto, OrderStatus } from "@/types/api";
 import { formatDate, formatWeiToEth } from "@/lib/utils";
 import { toast } from "sonner";
+import { ethers } from "ethers";
 
 const STATUS_STYLES: Record<string, string> = {
   HELD: "bg-yellow-500/10 text-yellow-600 border-yellow-500/20",
@@ -48,7 +49,15 @@ const SellerOrders = () => {
   });
 
   const releaseOrderMutation = useMutation({
-    mutationFn: (orderId: number) => apiClient.releaseOrder(orderId, token!),
+    // Khi Seller xác nhận giao, gửi kèm địa chỉ ví đang kết nối để backend đối chiếu
+    mutationFn: async (orderId: number) => {
+      if (!(window as any).ethereum) throw new Error("Không tìm thấy ví (MetaMask)");
+      await (window as any).ethereum.request?.({ method: "eth_requestAccounts" });
+      const provider = new ethers.BrowserProvider((window as any).ethereum);
+      const signer = await provider.getSigner();
+      const connected = await signer.getAddress();
+      return apiClient.releaseOrder(orderId, token!, connected);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["orders", "seller"] });
       toast.success("Đã xác nhận giao hàng thành công!");

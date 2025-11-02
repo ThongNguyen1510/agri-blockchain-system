@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, ParseIntPipe, Patch, Post, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Param, ParseIntPipe, Patch, Post, Req, UseGuards, ForbiddenException } from "@nestjs/common";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import { UserRole } from "../users/user-role.enum";
 import { CurrentUser } from "../auth/decorators/current-user.decorator";
@@ -58,7 +58,14 @@ export class OrdersController {
   async release(
     @CurrentUser() user: CurrentUserType,
     @Param("id", ParseIntPipe) id: number,
+    @Req() req: any,
   ): Promise<OrderDto> {
+    // Yêu cầu ví đang kết nối trùng với ví của Seller
+    const headerWallet = String(req.headers["x-wallet-address"] || "");
+    const expected = String((user as any).walletAddress || "");
+    if (!headerWallet || headerWallet.toLowerCase() !== expected.toLowerCase()) {
+      throw new ForbiddenException(`Ví đang kết nối không khớp với tài khoản (got: ${headerWallet}, expected: ${expected})`);
+    }
     const order = await this.ordersService.release(id, user.id);
     return OrderDto.fromEntity(order);
   }
@@ -69,7 +76,13 @@ export class OrdersController {
   async hold(
     @CurrentUser() user: CurrentUserType,
     @Param("id", ParseIntPipe) id: number,
+    @Req() req: any,
   ): Promise<OrderDto> {
+    // Yêu cầu ví đang kết nối trùng với ví của Buyer
+    const headerWallet = String(req.headers["x-wallet-address"] || "");
+    if (!headerWallet || headerWallet.toLowerCase() !== String((user as any).walletAddress || "").toLowerCase()) {
+      throw new ForbiddenException("Ví đang kết nối không khớp với tài khoản");
+    }
     const order = await this.ordersService.hold(id, user.id);
     return OrderDto.fromEntity(order);
   }

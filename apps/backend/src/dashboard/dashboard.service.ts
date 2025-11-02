@@ -13,13 +13,15 @@ export class DashboardService {
   async getSummary(user: CurrentUserType): Promise<DashboardSummaryDto> {
     const orderFilter = this.buildOrderFilter(user);
 
-    const [totalOrders, activeEscrows, disputes, releasedSum] = await Promise.all([
+    const [totalOrders, activeEscrows, disputes, releasedAmounts] = await Promise.all([
       this.prisma.order.count({ where: orderFilter }),
       this.prisma.order.count({ where: { ...orderFilter, status: "Held" } }),
       this.prisma.order.count({ where: { ...orderFilter, status: "Disputed" } }),
-      this.prisma.order.aggregate({
-        _sum: { totalWei: true },
+      // Tránh overflow bigint ở SQL Server khi dùng aggregate SUM
+      this.prisma.order.findMany({
         where: { ...orderFilter, status: "Released" },
+        select: { totalWei: true },
+        take: 5000, // giới hạn an toàn cho dashboard
       }),
     ]);
 
@@ -38,11 +40,14 @@ export class DashboardService {
       take: 60,
     });
 
+    // Tính tổng released bằng bigint ở Node để tránh overflow trong DB
+    const releasedTotalWei: bigint = releasedAmounts.reduce((acc, o) => acc + (o.totalWei ?? 0n), 0n);
+
     const stats = {
       totalOrders,
       activeEscrows,
       disputes,
-      releasedVolumeEth: this.toEthString(releasedSum._sum.totalWei),
+      releasedVolumeEth: this.toEthString(releasedTotalWei),
     };
 
     const sales = this.buildSalesSeries(salesSource);

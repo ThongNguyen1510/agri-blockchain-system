@@ -13,12 +13,15 @@ import Orders from "./pages/Orders";
 import Trace from "./pages/Trace";
 import NotFound from "./pages/NotFound";
 import Login from "./pages/Login";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 import SellerDashboard from "./pages/SellerDashboard";
 import SellerProducts from "./pages/SellerProducts";
 import SellerProductsNew from "./pages/SellerProductsNew";
 import SellerProductsEdit from "./pages/SellerProductsEdit";
 import SellerBatches from "./pages/SellerBatches";
 import SellerBatchesNew from "./pages/SellerBatchesNew";
+import SellerBatchesEdit from "./pages/SellerBatchesEdit";
 import SellerOrders from "./pages/SellerOrders";
 import UserProfile from "./pages/UserProfile";
 import DebugAuth from "./pages/DebugAuth";
@@ -36,6 +39,8 @@ const App = () => (
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/login" element={<Login />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
               <Route
                 path="/products"
                 element={
@@ -131,6 +136,14 @@ const App = () => (
                 element={
                   <RequireAuth>
                     <SellerBatchesNew />
+                  </RequireAuth>
+                }
+              />
+              <Route
+                path="/seller/batches/:id/edit"
+                element={
+                  <RequireAuth>
+                    <SellerBatchesEdit />
                   </RequireAuth>
                 }
               />

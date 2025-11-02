@@ -6,10 +6,17 @@ import { OrderStatus } from "./order-status.enum";
 import { CreateOrderDto } from "./dto/create-order.dto";
 import { UpdateOrderDto } from "./dto/update-order.dto";
 
-type OrderWithProduct = Order & { product: Product | null };
+type OrderWithProduct = Order & {
+  product: Product | null;
+  // Bổ sung thông tin ví để trả về cho frontend (chỉ chọn walletAddress)
+  buyer?: { walletAddress: string };
+  seller?: { walletAddress: string };
+};
 
 const orderInclude = {
   product: true,
+  buyer: { select: { walletAddress: true } },
+  seller: { select: { walletAddress: true } },
 } as const;
 
 @Injectable()

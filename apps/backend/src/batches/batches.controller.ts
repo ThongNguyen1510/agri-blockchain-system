@@ -1,4 +1,4 @@
-﻿import { Body, Controller, Get, Param, ParseIntPipe, Post, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Param, ParseIntPipe, Patch, Post, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import { CurrentUser } from "../auth/decorators/current-user.decorator";
 import type { CurrentUserType } from "../auth/decorators/current-user.decorator";
@@ -7,6 +7,7 @@ import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { UserRole } from "../users/user-role.enum";
 import { BatchesService } from "./batches.service";
 import { CreateBatchDto } from "./dto/create-batch.dto";
+import { UpdateBatchDto } from "./dto/update-batch.dto";
 import { BatchDto } from "./dto/batch.dto";
 import { BatchListItemDto } from "./dto/batch-list-item.dto";
 
@@ -44,6 +45,17 @@ export class BatchesController {
     @Param("id", ParseIntPipe) id: number,
   ): Promise<BatchDto> {
     const batch = await this.batchesService.findOne(id, user.id, user.role as UserRole);
+    return BatchDto.fromEntity(batch);
+  }
+
+  @Roles(UserRole.Seller)
+  @Patch(":id")
+  async update(
+    @CurrentUser() user: CurrentUserType,
+    @Param("id", ParseIntPipe) id: number,
+    @Body() dto: UpdateBatchDto,
+  ): Promise<BatchDto> {
+    const batch = await this.batchesService.update(id, dto, user.id, user.role as UserRole);
     return BatchDto.fromEntity(batch);
   }
 }

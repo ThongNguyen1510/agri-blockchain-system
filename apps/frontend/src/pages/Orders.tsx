@@ -74,14 +74,16 @@ const Orders = () => {
       const contract = new ethers.Contract(addressJson.address, abiJson as any, signer);
       // productId trên chain dạng bytes32: ta encode từ productId số nguyên
       const productIdBytes = ethers.encodeBytes32String(String(order.productId));
-      // TODO: thay signer.address bằng địa chỉ ví của Seller từ backend khi API trả về
-      const tx = await contract.createOrder(signer.address, productIdBytes, {
+      // Dùng ví của người bán từ backend để escrow chuyển tiền đúng đối tượng
+      const sellerAddr = order.sellerWalletAddress ?? (await signer.getAddress());
+      const tx = await contract.createOrder(sellerAddr, productIdBytes, {
         value: order.totalWei,
       });
       await tx.wait();
 
       // Sau khi on-chain thành công, gọi API để đổi trạng thái PENDING -> IN_ESCROW
-      await apiClient.holdOrder(order.id, token!);
+      const connected = await signer.getAddress();
+      await apiClient.holdOrder(order.id, token!, connected);
       await queryClient.invalidateQueries({ queryKey: ["orders"] });
       toast.success("Đã thanh toán ký quỹ thành công");
     } catch (e: any) {

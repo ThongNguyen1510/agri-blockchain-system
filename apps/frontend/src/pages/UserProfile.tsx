@@ -1,4 +1,5 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { Card } from "@/components/ui/card";
@@ -20,9 +21,18 @@ import {
 import { Link } from "react-router-dom";
 import { apiClient } from "@/lib/api-client";
 import { useAuth } from "@/context/AuthContext";
+import { Input } from "@/components/ui/input";
+import { ethers } from "ethers";
+import { toast } from "sonner";
 
 const UserProfile = () => {
   const { token, user: authUser } = useAuth();
+  const queryClient = useQueryClient();
+
+  // Trạng thái đổi ví
+  const [newWallet, setNewWallet] = useState("");
+  const [signature, setSignature] = useState<string | null>(null);
+  const [nonce, setNonce] = useState<string | null>(null);
 
   const {
     data: profile,
@@ -33,6 +43,44 @@ const UserProfile = () => {
     queryFn: () => apiClient.getProfile(token!),
     enabled: Boolean(token),
     staleTime: 1000 * 60 * 5, // 5 minutes
+  });
+
+  // Lấy nonce và ký bằng ví CŨ (đang liên kết trong hồ sơ): yêu cầu MetaMask
+  const getNonceAndSign = useMutation({
+    mutationFn: async () => {
+      if (!token) throw new Error("Thiếu token");
+      if (!(window as any).ethereum) throw new Error("Không tìm thấy ví (MetaMask)");
+      // Lấy nonce từ backend
+      const res = await apiClient.walletUpdateNonce(token);
+      setNonce(res.nonce);
+      // Yêu cầu MetaMask ký message nonce bằng ví CŨ (đang kết nối)
+      await (window as any).ethereum.request?.({ method: "eth_requestAccounts" });
+      const provider = new ethers.BrowserProvider((window as any).ethereum);
+      const signer = await provider.getSigner();
+      const sig = await signer.signMessage(res.nonce);
+      setSignature(sig);
+      toast.success("Đã ký xác minh thành công. Bây giờ hãy nhập ví mới và nhấn Cập nhật.");
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Lỗi lấy/ ký nonce"),
+  });
+
+  // Gửi yêu cầu đổi ví với chữ ký vừa ký bằng ví CŨ
+  const updateWalletMutation = useMutation({
+    mutationFn: async () => {
+      if (!token) throw new Error("Thiếu token");
+      if (!newWallet) throw new Error("Vui lòng nhập địa chỉ ví mới");
+      if (!signature) throw new Error("Vui lòng ký nonce bằng ví cũ trước");
+      const updated = await apiClient.updateWallet(newWallet, signature, token);
+      return updated;
+    },
+    onSuccess: async () => {
+      setSignature(null);
+      setNonce(null);
+      setNewWallet("");
+      await queryClient.invalidateQueries({ queryKey: ["profile"] });
+      toast.success("Đã cập nhật địa chỉ ví thành công");
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Đổi ví thất bại"),
   });
 
   const getRoleBadge = (role: string) => {
@@ -55,13 +103,7 @@ const UserProfile = () => {
     return `${address.slice(0, 6)}...${address.slice(-4)}`;
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("vi-VN", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
-  };
+  // (Ẩn thời gian tạo tài khoản để đơn giản UI, backend UserDto chưa trả createdAt)
 
   if (isLoading) {
     return (
@@ -106,6 +148,8 @@ const UserProfile = () => {
   }
 
   const user = profile || authUser;
+
+  // (Hooks đã được khai báo phía trên để tuân thủ Rules of Hooks)
 
   return (
     <div className="min-h-screen bg-background">
@@ -165,15 +209,7 @@ const UserProfile = () => {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-3">
-                  <Calendar className="h-5 w-5 text-muted-foreground" />
-                  <div>
-                    <p className="text-sm text-muted-foreground">Tham gia từ</p>
-                    <p className="font-medium">
-                      {user?.createdAt ? formatDate(user.createdAt) : "Không xác định"}
-                    </p>
-                  </div>
-                </div>
+                {/* Bỏ hiển thị ngày tham gia vì UserDto không có createdAt */}
               </div>
 
               <div className="mt-6 pt-6 border-t">
@@ -186,6 +222,40 @@ const UserProfile = () => {
 
             {/* Activity Summary */}
             <div className="md:col-span-2 space-y-6">
+              {/* Đổi địa chỉ ví (ký bằng ví cũ, nhập ví mới) */}
+              <Card className="p-6">
+                <h3 className="text-lg font-semibold mb-2">Đổi địa chỉ ví</h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Bước 1: Kết nối MetaMask với <b>ví CŨ</b> và nhấn "Ký xác minh" để chứng thực quyền sở hữu.
+                  Bước 2: Nhập <b>ví MỚI</b> rồi nhấn "Cập nhật ví".
+                </p>
+                <div className="flex flex-col md:flex-row gap-3">
+                  <Button
+                    variant="secondary"
+                    onClick={() => getNonceAndSign.mutate()}
+                    disabled={getNonceAndSign.isPending}
+                  >
+                    {getNonceAndSign.isPending ? "Đang ký..." : "Ký xác minh (ví cũ)"}
+                  </Button>
+                  <Input
+                    placeholder="Địa chỉ ví mới (0x...)"
+                    value={newWallet}
+                    onChange={(e) => setNewWallet(e.target.value)}
+                  />
+                  <Button
+                    onClick={() => updateWalletMutation.mutate()}
+                    disabled={updateWalletMutation.isPending}
+                    className="bg-emerald-600 hover:bg-emerald-700"
+                  >
+                    {updateWalletMutation.isPending ? "Đang cập nhật..." : "Cập nhật ví"}
+                  </Button>
+                </div>
+                {signature && (
+                  <p className="mt-3 text-xs text-muted-foreground">
+                    Đã ký nonce: {nonce?.slice(0, 24)}... | Signature: {signature.slice(0, 16)}...
+                  </p>
+                )}
+              </Card>
               {/* Quick Stats */}
               <Card className="p-6">
                 <h3 className="text-lg font-semibold mb-4">Hoạt động gần đây</h3>
@@ -259,10 +329,7 @@ const UserProfile = () => {
                       Hoạt động
                     </Badge>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Cập nhật lần cuối:</span>
-                    <span>{user?.createdAt ? formatDate(user.createdAt) : "Không xác định"}</span>
-                  </div>
+                  {/* Bỏ hiển thị thời gian cập nhật vì UserDto không có createdAt */}
                 </div>
               </Card>
             </div>

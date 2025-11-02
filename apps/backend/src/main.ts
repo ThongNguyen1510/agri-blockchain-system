@@ -8,12 +8,16 @@ import { join } from "path";
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  const allowedOrigins =
-    process.env.FRONTEND_URL?.split(",").map((origin) => origin.trim()) ?? [
-      "http://localhost:3000",
-      "http://localhost:3001",
-      "http://localhost:3004",
-    ];
+  const defaults = [
+    "http://localhost:3000",
+    "http://localhost:3001",
+    "http://localhost:3004",
+  ];
+  const fromEnv = process.env.FRONTEND_URL
+    ? process.env.FRONTEND_URL.split(",").map((o) => o.trim()).filter(Boolean)
+    : [];
+  const allowedOrigins = Array.from(new Set([...defaults, ...fromEnv]));
+  console.log("CORS allowed origins:", allowedOrigins);
 
   app.enableCors({
     origin: allowedOrigins,
@@ -24,6 +28,9 @@ async function bootstrap() {
       "Authorization",
       // Some browsers send lowercase header names in preflight
       "authorization",
+      // Cho phép frontend gửi ví đang kết nối để backend đối chiếu
+      "x-wallet-address",
+      "X-Wallet-Address",
     ],
     exposedHeaders: ["Authorization"],
   });

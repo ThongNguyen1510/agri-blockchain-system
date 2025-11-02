@@ -40,6 +40,13 @@ export class OrderDto {
   @ApiProperty()
   sellerId!: number;
 
+  // Địa chỉ ví để gọi contract chính xác
+  @ApiProperty({ description: "Ví của người mua", required: false })
+  buyerWalletAddress?: string;
+
+  @ApiProperty({ description: "Ví của người bán", required: false })
+  sellerWalletAddress?: string;
+
   @ApiProperty()
   quantity!: number;
 
@@ -55,7 +62,7 @@ export class OrderDto {
   @ApiProperty()
   createdAt!: string;
 
-  static fromEntity(order: Order & { product?: Product | null }): OrderDto {
+  static fromEntity(order: Order & { product?: Product | null; buyer?: { walletAddress: string } | null; seller?: { walletAddress: string } | null }): OrderDto {
     const dto = new OrderDto();
     dto.id = order.id;
     dto.status = order.status as OrderStatus;
@@ -63,6 +70,8 @@ export class OrderDto {
     dto.product = order.product ? OrderProductSummaryDto.fromEntity(order.product) : null;
     dto.buyerId = order.buyerId;
     dto.sellerId = order.sellerId;
+    dto.buyerWalletAddress = order.buyer?.walletAddress;
+    dto.sellerWalletAddress = order.seller?.walletAddress;
     dto.quantity = order.quantity;
     dto.totalWei = order.totalWei.toString();
     dto.onchainOrderId = order.onchainOrderId;

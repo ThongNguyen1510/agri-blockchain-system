@@ -31,7 +31,7 @@ export class ProductsService {
         sellerId,
         name: dto.name,
         description: dto.description ?? null,
-        priceWei: BigInt(dto.priceWei),
+        priceWei: BigInt(String(dto.priceWei)),
         stock: dto.stock,
         coverImageUrl: dto.coverImageUrl ?? null,
       },
@@ -118,7 +118,7 @@ export class ProductsService {
         batchId: dto.batchId ?? undefined,
         name: dto.name ?? undefined,
         description: dto.description ?? undefined,
-        priceWei: dto.priceWei !== undefined ? BigInt(dto.priceWei) : undefined,
+        priceWei: dto.priceWei !== undefined ? BigInt(String(dto.priceWei)) : undefined,
         stock: dto.stock ?? undefined,
         coverImageUrl: dto.coverImageUrl ?? undefined,
       },
@@ -134,6 +134,14 @@ export class ProductsService {
     }
     if (existing.sellerId !== sellerId) {
       throw new ForbiddenException("You can only delete your own products");
+    }
+
+    // Ngăn xóa nếu đã có đơn hàng tham chiếu để tránh lỗi FK (SQL Server NoAction)
+    const relatedOrders = await this.prisma.order.count({ where: { productId: id } });
+    if (relatedOrders > 0) {
+      throw new ForbiddenException(
+        "Không thể xóa sản phẩm vì đã có đơn hàng liên quan. Vui lòng đặt tồn kho = 0 để ẩn sản phẩm, hoặc hủy/hoàn tất các đơn trước."
+      );
     }
 
     await this.prisma.product.delete({ where: { id } });

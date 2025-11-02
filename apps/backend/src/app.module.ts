@@ -1,4 +1,5 @@
 import { Module } from "@nestjs/common";
+import { join } from "path";
 import { APP_GUARD } from "@nestjs/core";
 import { ConfigModule } from "@nestjs/config";
 import { AuthModule } from "./auth/auth.module";
@@ -15,7 +16,15 @@ import { UploadsModule } from "./uploads/uploads.module";
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
+    ConfigModule.forRoot({ 
+      isGlobal: true,
+      envFilePath: [
+        '.env',
+        join(process.cwd(), '.env'),
+        join(__dirname, '..', '..', '.env'),
+      ],
+      ignoreEnvFile: false,
+    }),
     PrismaModule,
     UsersModule,
     AuthModule,

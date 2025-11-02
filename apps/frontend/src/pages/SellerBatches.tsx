@@ -20,13 +20,15 @@ import {
   ArrowLeft,
   QrCode,
 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { apiClient } from "@/lib/api-client";
 import { useAuth } from "@/context/AuthContext";
 import type { BatchDto } from "@/types/api";
+import { toast } from "sonner";
 
 const SellerBatches = () => {
   const { token, user } = useAuth();
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
 
   const {
@@ -295,14 +297,20 @@ const SellerBatches = () => {
                   )}
                   
                   <div className="flex gap-2">
-                    <Button variant="outline" size="sm" className="flex-1 gap-2">
-                      <Eye className="h-4 w-4" />
-                      Xem chi tiết
-                    </Button>
-                    <Button variant="outline" size="sm" className="gap-2">
-                      <Edit className="h-4 w-4" />
-                      Sửa
-                    </Button>
+                    {/* Xem chi tiết: dẫn sang trang truy xuất nguồn gốc của lô hàng */}
+                    <Link to={`/trace/${batch.batchCode}`} className="flex-1">
+                      <Button variant="outline" size="sm" className="w-full gap-2">
+                        <Eye className="h-4 w-4" />
+                        Xem chi tiết
+                      </Button>
+                    </Link>
+                    {/* Sửa lô hàng */}
+                    <Link to={`/seller/batches/${batch.id}/edit`}>
+                      <Button variant="outline" size="sm" className="gap-2">
+                        <Edit className="h-4 w-4" />
+                        Sửa
+                      </Button>
+                    </Link>
                   </div>
                 </div>
               </Card>

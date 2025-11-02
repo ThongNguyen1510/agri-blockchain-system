@@ -1,9 +1,10 @@
-﻿import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
+import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { Batch } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import type { CurrentUserType } from "../auth/decorators/current-user.decorator";
 import { UserRole } from "../users/user-role.enum";
 import { CreateBatchDto } from "./dto/create-batch.dto";
+import { UpdateBatchDto } from "./dto/update-batch.dto";
 import { BatchListItemDto } from "./dto/batch-list-item.dto";
 
 @Injectable()
@@ -60,6 +61,50 @@ export class BatchesService {
       throw new ForbiddenException("Access denied");
     }
     return batch;
+  }
+
+  async update(id: number, dto: UpdateBatchDto, userId: number, role: UserRole): Promise<Batch> {
+    const batch = await this.prisma.batch.findUnique({ where: { id } });
+    if (!batch) {
+      throw new NotFoundException("Batch not found");
+    }
+
+    // Kiểm tra quyền sở hữu
+    if (role !== UserRole.Admin && batch.createdBy !== userId) {
+      throw new ForbiddenException("Chỉ chủ lô mới được chỉnh sửa");
+    }
+
+    // Kiểm tra xem lô đã được khóa (có hash/IPFS) chưa
+    const isLocked = Boolean(batch.ipfsCid || batch.hashSha256);
+
+    // Kiểm tra có đơn hàng liên quan không
+    const hasOrders = await this.prisma.order.count({
+      where: {
+        product: { batchId: id },
+      },
+    });
+
+    // Nếu đã khóa hoặc có đơn hàng, chỉ cho phép sửa notes, ipfsCid, hashSha256
+    if (isLocked || hasOrders > 0) {
+      if (dto.farmName || dto.harvestDate || dto.variety) {
+        throw new ForbiddenException(
+          "Lô đã được xác thực hoặc có đơn hàng. Chỉ có thể cập nhật ghi chú và chứng từ."
+        );
+      }
+    }
+
+    // Cập nhật batch
+    return this.prisma.batch.update({
+      where: { id },
+      data: {
+        farmName: dto.farmName ?? undefined,
+        harvestDate: dto.harvestDate ? new Date(dto.harvestDate) : undefined,
+        variety: dto.variety ?? undefined,
+        notes: dto.notes ?? undefined,
+        ipfsCid: dto.ipfsCid ?? undefined,
+        hashSha256: dto.hashSha256 ?? undefined,
+      },
+    });
   }
 
   private mapToListItem(batch: Batch): BatchListItemDto {

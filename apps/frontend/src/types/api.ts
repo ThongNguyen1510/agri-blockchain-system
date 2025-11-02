@@ -71,6 +71,9 @@ export interface OrderDto {
   product?: OrderProductSummaryDto | null;
   buyerId: number;
   sellerId: number;
+  // Địa chỉ ví của người mua/người bán để gọi contract chính xác
+  buyerWalletAddress?: string;
+  sellerWalletAddress?: string;
   quantity: number;
   totalWei: string;
   onchainOrderId?: string | null;
