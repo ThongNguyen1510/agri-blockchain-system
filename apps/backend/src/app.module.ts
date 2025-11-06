@@ -13,6 +13,10 @@ import { ProductsModule } from "./products/products.module";
 import { OrdersModule } from "./orders/orders.module";
 import { DashboardModule } from "./dashboard/dashboard.module";
 import { UploadsModule } from "./uploads/uploads.module";
+import { BlockchainModule } from "./blockchain/blockchain.module";
+import { ReviewsModule } from "./reviews/reviews.module";
+import { AdminModule } from "./admin/admin.module";
+import { CertificationsModule } from "./certifications/certifications.module";
 
 @Module({
   imports: [
@@ -33,6 +37,10 @@ import { UploadsModule } from "./uploads/uploads.module";
     OrdersModule,
     DashboardModule,
     UploadsModule,
+    BlockchainModule,
+    ReviewsModule,
+    AdminModule,
+    CertificationsModule,
   ],
   controllers: [HealthController],
   providers: [

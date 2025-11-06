@@ -19,17 +19,21 @@ import {
   Filter,
   ArrowLeft,
   QrCode,
+  Shield,
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { apiClient } from "@/lib/api-client";
 import { useAuth } from "@/context/AuthContext";
 import type { BatchDto } from "@/types/api";
 import { toast } from "sonner";
+import { AddCertificationModal } from "@/components/AddCertificationModal";
 
 const SellerBatches = () => {
   const { token, user } = useAuth();
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
+  const [certModalOpen, setCertModalOpen] = useState(false);
+  const [selectedBatch, setSelectedBatch] = useState<BatchDto | null>(null);
 
   const {
     data: batches,
@@ -296,21 +300,36 @@ const SellerBatches = () => {
                     </div>
                   )}
                   
-                  <div className="flex gap-2">
-                    {/* Xem chi tiết: dẫn sang trang truy xuất nguồn gốc của lô hàng */}
-                    <Link to={`/trace/${batch.batchCode}`} className="flex-1">
-                      <Button variant="outline" size="sm" className="w-full gap-2">
-                        <Eye className="h-4 w-4" />
-                        Xem chi tiết
-                      </Button>
-                    </Link>
-                    {/* Sửa lô hàng */}
-                    <Link to={`/seller/batches/${batch.id}/edit`}>
-                      <Button variant="outline" size="sm" className="gap-2">
-                        <Edit className="h-4 w-4" />
-                        Sửa
-                      </Button>
-                    </Link>
+                  <div className="space-y-2">
+                    <div className="flex gap-2">
+                      {/* Xem chi tiết: dẫn sang trang truy xuất nguồn gốc của lô hàng */}
+                      <Link to={`/trace/${batch.batchCode}`} className="flex-1">
+                        <Button variant="outline" size="sm" className="w-full gap-2">
+                          <Eye className="h-4 w-4" />
+                          Xem chi tiết
+                        </Button>
+                      </Link>
+                      {/* Sửa lô hàng */}
+                      <Link to={`/seller/batches/${batch.id}/edit`}>
+                        <Button variant="outline" size="sm" className="gap-2">
+                          <Edit className="h-4 w-4" />
+                          Sửa
+                        </Button>
+                      </Link>
+                    </div>
+                    {/* Thêm chứng nhận */}
+                    <Button
+                      variant="default"
+                      size="sm"
+                      className="w-full gap-2 bg-green-600 hover:bg-green-700"
+                      onClick={() => {
+                        setSelectedBatch(batch);
+                        setCertModalOpen(true);
+                      }}
+                    >
+                      <Shield className="h-4 w-4" />
+                      Thêm chứng nhận
+                    </Button>
                   </div>
                 </div>
               </Card>
@@ -320,6 +339,16 @@ const SellerBatches = () => {
       </div>
 
       <Footer />
+
+      {/* Modal thêm chứng nhận */}
+      {selectedBatch && (
+        <AddCertificationModal
+          open={certModalOpen}
+          onOpenChange={setCertModalOpen}
+          batchId={selectedBatch.id}
+          batchCode={selectedBatch.batchCode}
+        />
+      )}
     </div>
   );
 };

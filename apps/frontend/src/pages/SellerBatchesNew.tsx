@@ -7,19 +7,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   ArrowLeft,
   Package,
   Save,
-  Upload,
-  Calendar,
-  MapPin,
-  Hash,
-  FileText,
-  AlertCircle,
-  Link as LinkIcon,
-  Loader2,
+  Shield,
+  Link2,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
@@ -37,13 +30,9 @@ const SellerBatchesNew = () => {
     harvestDate: "",
     variety: "",
     notes: "",
-    ipfsCid: "",
-    hashSha256: "",
   });
   
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
-  const [anchorToBlockchain, setAnchorToBlockchain] = useState(true);
   const [isAnchoring, setIsAnchoring] = useState(false);
 
   const handleInputChange = (field: string, value: string) => {
@@ -61,30 +50,6 @@ const SellerBatchesNew = () => {
       ...prev,
       batchCode,
     }));
-  };
-
-  const simulateFileUpload = async () => {
-    setIsUploading(true);
-    try {
-      // Simulate file upload to IPFS
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Generate mock IPFS CID and hash
-      const mockCid = `Qm${Math.random().toString(36).substring(2, 46)}`;
-      const mockHash = `0x${Math.random().toString(16).substring(2, 66)}`;
-      
-      setFormData(prev => ({
-        ...prev,
-        ipfsCid: mockCid,
-        hashSha256: mockHash,
-      }));
-      
-      toast.success("Tài liệu đã được upload lên IPFS thành công!");
-    } catch (error) {
-      toast.error("Có lỗi khi upload tài liệu");
-    } finally {
-      setIsUploading(false);
-    }
   };
 
   const validateForm = () => {
@@ -125,35 +90,31 @@ const SellerBatchesNew = () => {
         harvestDate: formData.harvestDate,
         variety: formData.variety.trim(),
         notes: formData.notes.trim() || undefined,
-        ipfsCid: formData.ipfsCid.trim() || undefined,
-        hashSha256: formData.hashSha256.trim() || undefined,
       };
-      
-      console.log("Creating batch with data:", batchData);
-      console.log("Using token:", token ? "Token exists" : "No token");
       
       // Tạo batch trong database
       const createdBatch = await apiClient.createBatch(batchData, token);
+      toast.success("Lô hàng đã được tạo thành công!");
       
-      // Nếu chọn anchor lên blockchain
-      if (anchorToBlockchain) {
-        setIsAnchoring(true);
-        try {
-          console.log("Anchoring batch to blockchain...");
-          const tx = await anchorBatchHash(createdBatch.id, batchData);
-          
-          console.log("Blockchain transaction:", tx.hash);
-          toast.success(`Lô hàng đã được ghi lên blockchain! TX: ${tx.hash.slice(0, 10)}...`);
-        } catch (blockchainError) {
-          console.error("Blockchain error:", blockchainError);
-          toast.error("Lô hàng đã tạo thành công nhưng không thể ghi lên blockchain. Vui lòng thử lại sau.");
-        } finally {
-          setIsAnchoring(false);
-        }
+      // Tự động anchor lên blockchain
+      setIsAnchoring(true);
+      try {
+        const tx = await anchorBatchHash(createdBatch.id, batchData);
+        console.log("Blockchain transaction:", tx.hash);
+        toast.success(`Đã ghi hash lên blockchain! TX: ${tx.hash.slice(0, 10)}...`, {
+          duration: 5000,
+        });
+      } catch (blockchainError) {
+        console.error("Blockchain error:", blockchainError);
+        toast.warning("Lô hàng đã tạo thành công nhưng chưa ghi lên blockchain. Bạn có thể thử lại sau.");
+      } finally {
+        setIsAnchoring(false);
       }
       
-      toast.success("Lô hàng đã được tạo thành công!");
-      navigate("/seller/batches");
+      // Chờ 1s để user đọc thông báo
+      setTimeout(() => {
+        navigate("/seller/batches");
+      }, 1500);
     } catch (error) {
       console.error("Error creating batch:", error);
       
@@ -278,152 +239,47 @@ const SellerBatchesNew = () => {
                 </div>
               </div>
 
-              {/* Documentation & Blockchain */}
-              <div className="space-y-6">
-                <h2 className="text-2xl font-semibold flex items-center gap-2">
-                  <FileText className="h-6 w-6 text-primary" />
-                  Chứng từ và Blockchain
-                </h2>
-
-                {/* File Upload Section */}
-                <div className="space-y-4">
-                  <div className="rounded-lg border-2 border-dashed border-muted-foreground/25 p-8 text-center">
-                    <Upload className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                    <h3 className="text-lg font-semibold mb-2">Upload chứng từ</h3>
-                    <p className="text-muted-foreground mb-4">
-                      Upload các tài liệu chứng minh nguồn gốc như: giấy chứng nhận hữu cơ, 
-                      báo cáo phân tích chất lượng, hình ảnh quy trình sản xuất...
-                    </p>
-                    <Button 
-                      type="button" 
-                      onClick={simulateFileUpload}
-                      disabled={isUploading}
-                      className="gap-2"
-                    >
-                      {isUploading ? (
-                        <>
-                          <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                          Đang upload...
-                        </>
-                      ) : (
-                        <>
-                          <Upload className="h-4 w-4" />
-                          Chọn tài liệu
-                        </>
-                      )}
-                    </Button>
-                  </div>
-
-                  {/* IPFS Status */}
-                  {formData.ipfsCid && (
-                    <div className="rounded-lg border border-green-200 bg-green-50 p-4">
-                      <div className="flex items-center gap-2 mb-2">
-                        <AlertCircle className="h-5 w-5 text-green-600" />
-                        <span className="font-semibold text-green-800">Đã upload thành công</span>
-                      </div>
-                      <div className="space-y-2 text-sm">
-                        <div className="flex items-center gap-2">
-                          <Hash className="h-4 w-4 text-green-600" />
-                          <span className="text-green-700">IPFS CID:</span>
-                          <code className="bg-green-100 px-2 py-1 rounded text-xs">
-                            {formData.ipfsCid}
-                          </code>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Hash className="h-4 w-4 text-green-600" />
-                          <span className="text-green-700">Hash:</span>
-                          <code className="bg-green-100 px-2 py-1 rounded text-xs">
-                            {formData.hashSha256.slice(0, 20)}...
-                          </code>
-                        </div>
-                      </div>
+              {/* Blockchain & Certifications Info */}
+              <div className="space-y-4">
+                {/* Blockchain Info */}
+                <div className="rounded-lg border-2 border-green-200 bg-green-50 p-6">
+                  <div className="flex items-start gap-3">
+                    <Link2 className="h-6 w-6 text-green-600 flex-shrink-0 mt-1" />
+                    <div className="space-y-2">
+                      <h3 className="font-semibold text-green-900">Tự động ghi lên Blockchain</h3>
+                      <p className="text-sm text-green-700">
+                        Sau khi tạo lô hàng, hệ thống sẽ tự động ghi hash của lô hàng lên blockchain để:
+                      </p>
+                      <ul className="text-sm text-green-700 space-y-1 ml-4">
+                        <li>✓ Đảm bảo tính minh bạch và không thể sửa đổi</li>
+                        <li>✓ Xác thực nguồn gốc truy xuất</li>
+                        <li>✓ Tăng độ tin cậy cho người mua</li>
+                      </ul>
                     </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Preview */}
-              {(formData.batchCode || formData.farmName || formData.variety) && (
-                <div className="space-y-4">
-                  <h2 className="text-2xl font-semibold flex items-center gap-2">
-                    <Package className="h-6 w-6 text-primary" />
-                    Xem trước lô hàng
-                  </h2>
-                  <Card className="p-6 border-dashed">
-                    <div className="grid gap-4 md:grid-cols-2">
-                      <div className="space-y-3">
-                        <div className="flex items-center gap-3">
-                          <Hash className="h-4 w-4 text-muted-foreground" />
-                          <span className="text-sm text-muted-foreground">Mã lô:</span>
-                          <span className="font-semibold">{formData.batchCode || "Chưa có"}</span>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <MapPin className="h-4 w-4 text-muted-foreground" />
-                          <span className="text-sm text-muted-foreground">Nông trại:</span>
-                          <span className="font-semibold">{formData.farmName || "Chưa có"}</span>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <Package className="h-4 w-4 text-muted-foreground" />
-                          <span className="text-sm text-muted-foreground">Giống:</span>
-                          <span className="font-semibold">{formData.variety || "Chưa có"}</span>
-                        </div>
-                      </div>
-                      <div className="space-y-3">
-                        <div className="flex items-center gap-3">
-                          <Calendar className="h-4 w-4 text-muted-foreground" />
-                          <span className="text-sm text-muted-foreground">Thu hoạch:</span>
-                          <span className="font-semibold">
-                            {formData.harvestDate 
-                              ? new Date(formData.harvestDate).toLocaleDateString("vi-VN")
-                              : "Chưa chọn"
-                            }
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <FileText className="h-4 w-4 text-muted-foreground" />
-                          <span className="text-sm text-muted-foreground">Chứng từ:</span>
-                          <span className={`font-semibold ${formData.ipfsCid ? 'text-green-600' : 'text-orange-600'}`}>
-                            {formData.ipfsCid ? "Đã upload" : "Chưa upload"}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </Card>
-                </div>
-              )}
-
-              {/* Blockchain Integration */}
-              <div className="space-y-4 pt-6">
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="blockchain"
-                    checked={anchorToBlockchain}
-                    onCheckedChange={(checked) => setAnchorToBlockchain(checked as boolean)}
-                  />
-                  <div className="grid gap-1.5 leading-none">
-                    <label
-                      htmlFor="blockchain"
-                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                    >
-                      Ghi hash lên blockchain
-                    </label>
-                    <p className="text-xs text-muted-foreground">
-                      Đảm bảo tính minh bạch và không thể sửa đổi dữ liệu lô hàng
-                    </p>
                   </div>
                 </div>
-                
-                {anchorToBlockchain && (
-                  <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <LinkIcon className="h-5 w-5 text-blue-600" />
-                      <span className="font-semibold text-blue-800">Blockchain Integration</span>
+
+                {/* Certifications Info */}
+                <div className="rounded-lg border-2 border-blue-200 bg-blue-50 p-6">
+                  <div className="flex items-start gap-3">
+                    <Shield className="h-6 w-6 text-blue-600 flex-shrink-0 mt-1" />
+                    <div className="space-y-2">
+                      <h3 className="font-semibold text-blue-900">Thêm chứng nhận sau khi tạo lô hàng</h3>
+                      <p className="text-sm text-blue-700">
+                        Sau khi tạo lô hàng thành công, bạn có thể thêm các chứng nhận và tài liệu như:
+                      </p>
+                      <ul className="text-sm text-blue-700 space-y-1 ml-4">
+                        <li>• Giấy chứng nhận VietGAP, GlobalGAP, Organic</li>
+                        <li>• Báo cáo kiểm định chất lượng</li>
+                        <li>• Nhật ký quy trình sản xuất</li>
+                        <li>• Hình ảnh thu hoạch và đóng gói</li>
+                      </ul>
+                      <p className="text-sm text-blue-700 font-medium mt-3">
+                        👉 Vào trang "Quản lý lô hàng" → Click nút "Thêm chứng nhận"
+                      </p>
                     </div>
-                    <p className="text-sm text-blue-700">
-                      Hash của lô hàng sẽ được ghi lên smart contract để đảm bảo tính toàn vẹn dữ liệu.
-                    </p>
                   </div>
-                )}
+                </div>
               </div>
 
               {/* Submit Buttons */}
@@ -445,7 +301,7 @@ const SellerBatchesNew = () => {
                     </>
                   ) : isAnchoring ? (
                     <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <Link2 className="h-4 w-4 animate-pulse" />
                       Đang ghi blockchain...
                     </>
                   ) : (

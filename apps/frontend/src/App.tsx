@@ -24,6 +24,7 @@ import SellerBatchesNew from "./pages/SellerBatchesNew";
 import SellerBatchesEdit from "./pages/SellerBatchesEdit";
 import SellerOrders from "./pages/SellerOrders";
 import UserProfile from "./pages/UserProfile";
+import Admin from "./pages/Admin";
 import DebugAuth from "./pages/DebugAuth";
 
 const queryClient = new QueryClient();
@@ -154,6 +155,16 @@ const App = () => (
                 element={
                   <RequireAuth>
                     <UserProfile />
+                  </RequireAuth>
+                }
+              />
+              
+              {/* Admin Route */}
+              <Route
+                path="/admin"
+                element={
+                  <RequireAuth>
+                    <Admin />
                   </RequireAuth>
                 }
               />

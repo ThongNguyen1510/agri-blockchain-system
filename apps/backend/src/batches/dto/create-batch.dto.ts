@@ -1,4 +1,4 @@
-﻿import { ApiPropertyOptional } from "@nestjs/swagger";
+import { ApiPropertyOptional } from "@nestjs/swagger";
 import {
   IsDateString,
   IsNumber,
@@ -56,6 +56,12 @@ export class CreateBatchDto {
   @IsString()
   @MaxLength(255)
   hashSha256?: string;
+
+  @ApiPropertyOptional({ description: "URL tài liệu lô hàng" })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  documentUrl?: string;
 
   @ApiPropertyOptional({ description: "Giá bán mỗi đơn vị (ETH)" })
   @IsOptional()

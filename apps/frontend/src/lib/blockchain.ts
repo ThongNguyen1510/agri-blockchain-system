@@ -5,7 +5,15 @@ export const AGRO_ESCROW_ABI = [
   "function anchorBatchHash(uint256 batchId, bytes32 hash) external",
   "function getBatch(uint256 batchId) external view returns (tuple(uint256 batchId, bytes32 hash, address creator, uint256 timestamp))",
   "function isBatchAnchored(uint256 batchId) external view returns (bool)",
-  "event BatchHashAnchored(uint256 indexed batchId, bytes32 indexed hash, address indexed creator)"
+  "function createOrder(address seller, bytes32 productId) external payable returns (uint256 orderId)",
+  "function releaseOrder(uint256 orderId) external",
+  "function refundOrder(uint256 orderId) external",
+  "function getOrder(uint256 orderId) external view returns (tuple(address buyer, address seller, bytes32 productId, uint256 amount, uint8 status))",
+  "function nextOrderId() external view returns (uint256)",
+  "event BatchHashAnchored(uint256 indexed batchId, bytes32 indexed hash, address indexed creator)",
+  "event OrderCreated(uint256 indexed orderId, address indexed buyer, address indexed seller, bytes32 productId, uint256 amount)",
+  "event OrderReleased(uint256 indexed orderId)",
+  "event OrderRefunded(uint256 indexed orderId)"
 ];
 
 // Contract address (sẽ được set từ environment)
@@ -125,6 +133,121 @@ export async function getBatchFromBlockchain(batchId: number) {
     return await contract.getBatch(batchId);
   } catch (error) {
     console.error("Error getting batch from blockchain:", error);
+    return null;
+  }
+}
+
+/**
+ * Tạo order on-chain với escrow
+ */
+export async function createOrderOnChain(
+  sellerAddress: string,
+  productId: string,
+  amountWei: string
+): Promise<{ orderId: number; txHash: string }> {
+  try {
+    const contract = await getAgroEscrowContract();
+    const productIdBytes32 = ethers.encodeBytes32String(productId);
+    
+    console.log("Creating order on-chain:", {
+      seller: sellerAddress,
+      productId,
+      productIdBytes32,
+      amount: amountWei,
+    });
+
+    const tx = await contract.createOrder(sellerAddress, productIdBytes32, {
+      value: amountWei,
+    });
+    
+    console.log("Transaction sent:", tx.hash);
+    const receipt = await tx.wait();
+    console.log("Transaction confirmed:", receipt);
+
+    // Parse OrderCreated event để lấy orderId
+    const orderCreatedEvent = receipt.logs
+      .map((log: any) => {
+        try {
+          return contract.interface.parseLog(log);
+        } catch {
+          return null;
+        }
+      })
+      .find((parsed: any) => parsed?.name === "OrderCreated");
+
+    const orderId = orderCreatedEvent?.args?.orderId
+      ? Number(orderCreatedEvent.args.orderId)
+      : 0;
+
+    return {
+      orderId,
+      txHash: receipt.hash,
+    };
+  } catch (error) {
+    console.error("Error creating order on-chain:", error);
+    throw error;
+  }
+}
+
+/**
+ * Release order (chỉ owner contract có thể gọi)
+ */
+export async function releaseOrderOnChain(orderId: number): Promise<string> {
+  try {
+    const contract = await getAgroEscrowContract();
+    
+    console.log("Releasing order on-chain:", orderId);
+    const tx = await contract.releaseOrder(orderId);
+    console.log("Transaction sent:", tx.hash);
+    
+    const receipt = await tx.wait();
+    console.log("Transaction confirmed:", receipt);
+    
+    return receipt.hash;
+  } catch (error) {
+    console.error("Error releasing order on-chain:", error);
+    throw error;
+  }
+}
+
+/**
+ * Refund order (chỉ owner contract có thể gọi)
+ */
+export async function refundOrderOnChain(orderId: number): Promise<string> {
+  try {
+    const contract = await getAgroEscrowContract();
+    
+    console.log("Refunding order on-chain:", orderId);
+    const tx = await contract.refundOrder(orderId);
+    console.log("Transaction sent:", tx.hash);
+    
+    const receipt = await tx.wait();
+    console.log("Transaction confirmed:", receipt);
+    
+    return receipt.hash;
+  } catch (error) {
+    console.error("Error refunding order on-chain:", error);
+    throw error;
+  }
+}
+
+/**
+ * Lấy thông tin order từ blockchain
+ */
+export async function getOrderFromBlockchain(orderId: number) {
+  try {
+    const contract = await getAgroEscrowContract();
+    const order = await contract.getOrder(orderId);
+    
+    return {
+      buyer: order.buyer,
+      seller: order.seller,
+      productId: ethers.decodeBytes32String(order.productId),
+      amount: order.amount.toString(),
+      status: Number(order.status), // 0=Held, 1=Released, 2=Refunded
+    };
+  } catch (error) {
+    console.error("Error getting order from blockchain:", error);
     return null;
   }
 }

@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ShieldCheck, Calendar, MapPin, FileText, Copy, ExternalLink, Search, CheckCircle2 } from "lucide-react";
+import { ShieldCheck, Calendar, MapPin, FileText, Copy, ExternalLink, Search, CheckCircle2, XCircle, AlertCircle } from "lucide-react";
 import QRCode from "react-qr-code";
 import { useAuth } from "@/context/AuthContext";
 import { apiClient } from "@/lib/api-client";
@@ -15,12 +15,17 @@ import type { BatchSummaryDto } from "@/types/api";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { formatDate } from "@/lib/utils";
+import { CertificationsList } from "@/components/CertificationsList";
 
 const Trace = () => {
   const { batchId } = useParams<{ batchId?: string }>();
   const { token } = useAuth();
   const [searchBatch, setSearchBatch] = useState(batchId ?? "");
   const [selectedBatch, setSelectedBatch] = useState<BatchSummaryDto | null>(null);
+  const [verificationStatus, setVerificationStatus] = useState<{
+    loading: boolean;
+    result?: { anchored: boolean; verified: boolean; onChainHash?: string; message: string };
+  }>({ loading: false });
 
   const {
     data: batches,
@@ -90,6 +95,27 @@ const Trace = () => {
       toast.success(`Đã sao chép ${label} vào bộ nhớ tạm`);
     } catch {
       toast.error("Không thể sao chép");
+    }
+  };
+
+  const handleVerifyBlockchain = async () => {
+    if (!selectedBatch || !token) return;
+    
+    setVerificationStatus({ loading: true });
+    try {
+      const result = await apiClient.verifyBatch(selectedBatch.id, token);
+      setVerificationStatus({ loading: false, result });
+      
+      if (result.verified) {
+        toast.success("Xác thực blockchain thành công!");
+      } else if (result.anchored) {
+        toast.warning("Batch đã anchor nhưng hash không khớp");
+      } else {
+        toast.info("Batch chưa được anchor lên blockchain");
+      }
+    } catch (error) {
+      setVerificationStatus({ loading: false });
+      toast.error("Không thể xác thực blockchain");
     }
   };
 
@@ -209,6 +235,29 @@ const Trace = () => {
               <div className="rounded-lg bg-secondary/50 p-3 font-mono text-sm">
                 {selectedBatch.ipfsCid ?? "Chưa cập nhật"}
               </div>
+              
+              {/* Nút xem tài liệu nếu có documentUrl */}
+              {(() => {
+                const docUrl = (selectedBatch as any).documentUrl;
+                console.log('Batch documentUrl:', docUrl);
+                console.log('Full batch data:', selectedBatch);
+                
+                return docUrl ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full mt-2 gap-2"
+                    onClick={() => window.open(docUrl, "_blank")}
+                  >
+                    <FileText className="h-4 w-4" />
+                    Xem tài liệu lô hàng
+                  </Button>
+                ) : (
+                  <p className="text-xs text-muted-foreground mt-2 text-center">
+                    Lô hàng này chưa có tài liệu đính kèm
+                  </p>
+                );
+              })()}
             </div>
 
             <div>
@@ -230,19 +279,66 @@ const Trace = () => {
             </div>
           </div>
 
-          {selectedBatch.hashSha256 && (
+          <div className="space-y-3">
             <Button
-              variant="outline"
+              variant="default"
               className="w-full gap-2"
-              onClick={() =>
-                window.open(`https://etherscan.io/search?q=${selectedBatch.hashSha256}`, "_blank", "noopener")
-              }
+              onClick={handleVerifyBlockchain}
+              disabled={verificationStatus.loading || !selectedBatch.hashSha256}
             >
-              Xem trên block explorer
-              <ExternalLink className="h-4 w-4" />
+              <ShieldCheck className="h-4 w-4" />
+              {verificationStatus.loading ? "Đang xác thực..." : "Xác thực trên Blockchain"}
             </Button>
-          )}
+
+            {verificationStatus.result && (
+              <div className={`rounded-lg border p-4 ${
+                verificationStatus.result.verified
+                  ? "border-green-500/50 bg-green-500/10"
+                  : verificationStatus.result.anchored
+                  ? "border-yellow-500/50 bg-yellow-500/10"
+                  : "border-gray-500/50 bg-gray-500/10"
+              }`}>
+                <div className="flex items-start gap-3">
+                  {verificationStatus.result.verified ? (
+                    <CheckCircle2 className="h-5 w-5 text-green-500" />
+                  ) : verificationStatus.result.anchored ? (
+                    <AlertCircle className="h-5 w-5 text-yellow-500" />
+                  ) : (
+                    <XCircle className="h-5 w-5 text-gray-500" />
+                  )}
+                  <div className="flex-1">
+                    <p className="font-semibold">{verificationStatus.result.message}</p>
+                    {verificationStatus.result.onChainHash && (
+                      <p className="mt-1 font-mono text-xs text-muted-foreground">
+                        On-chain hash: {verificationStatus.result.onChainHash.slice(0, 20)}...
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {selectedBatch.hashSha256 && (
+              <Button
+                variant="outline"
+                className="w-full gap-2"
+                onClick={() =>
+                  window.open(`https://etherscan.io/search?q=${selectedBatch.hashSha256}`, "_blank", "noopener")
+                }
+              >
+                Xem trên block explorer
+                <ExternalLink className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
         </Card>
+
+        {/* Hiển thị chứng nhận nếu có batch được chọn */}
+        {selectedBatch && (
+          <div className="mt-8">
+            <CertificationsList batchId={selectedBatch.id} />
+          </div>
+        )}
       </div>
     );
   };

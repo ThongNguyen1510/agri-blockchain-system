@@ -165,7 +165,11 @@ const Index = () => {
                 <ArrowRight className="h-5 w-5" />
               </Button>
             </Link>
-            <Button size="lg" variant="outline" className="border-white text-white hover:bg-white hover:text-primary">
+            <Button 
+              size="lg" 
+              variant="outline" 
+              className="border-2 border-white bg-transparent text-white hover:bg-white hover:text-primary transition-colors"
+            >
               Liên hệ tư vấn
             </Button>
           </div>

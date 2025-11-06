@@ -15,12 +15,13 @@ model User {
   walletAddress String      @map("WalletAddress") @db.NVarChar(100)
   createdAt     DateTime    @default(now()) @map("CreatedAt") @db.DateTime2
 
-  batches            Batch[]                @relation("UserBatches")
-  products           Product[]              @relation("UserProducts")
-  buyerOrders        Order[]                @relation("OrderBuyer")
-  sellerOrders       Order[]                @relation("OrderSeller")
-  auditLogs          AuditLog[]
+  batches             Batch[]                @relation("UserBatches")
+  products            Product[]              @relation("UserProducts")
+  buyerOrders         Order[]                @relation("OrderBuyer")
+  sellerOrders        Order[]                @relation("OrderSeller")
+  auditLogs           AuditLog[]
   passwordResetTokens PasswordResetToken[]
+  reviews             Review[]
 
   @@map("User")
 }
@@ -34,11 +35,13 @@ model Batch {
   notes       String?   @map("Notes") @db.NVarChar(500)
   ipfsCid     String?   @map("IpfsCid") @db.NVarChar(255)
   hashSha256  String?   @map("HashSha256") @db.NVarChar(255)
+  documentUrl String?   @map("DocumentUrl") @db.NVarChar(500)
   createdBy   Int       @map("CreatedBy") @db.Int
   createdAt   DateTime  @default(now()) @map("CreatedAt") @db.DateTime2
 
-  owner    User     @relation("UserBatches", fields: [createdBy], references: [id], onUpdate: NoAction, onDelete: NoAction)
-  products Product[]
+  owner           User            @relation("UserBatches", fields: [createdBy], references: [id], onUpdate: NoAction, onDelete: NoAction)
+  products        Product[]
+  certifications  Certification[]
 
   @@map("Batch")
 }
@@ -54,9 +57,11 @@ model Product {
   coverImageUrl String?   @map("CoverImageUrl") @db.NVarChar(255)
   createdAt     DateTime  @default(now()) @map("CreatedAt") @db.DateTime2
 
-  batch  Batch  @relation(fields: [batchId], references: [id], onUpdate: NoAction, onDelete: NoAction)
-  seller User   @relation("UserProducts", fields: [sellerId], references: [id], onUpdate: NoAction, onDelete: NoAction)
-  orders Order[]
+  batch           Batch           @relation(fields: [batchId], references: [id], onUpdate: NoAction, onDelete: NoAction)
+  seller          User            @relation("UserProducts", fields: [sellerId], references: [id], onUpdate: NoAction, onDelete: NoAction)
+  orders          Order[]
+  reviews         Review[]
+  certifications  Certification[]
 
   @@map("Product")
 }
@@ -103,4 +108,39 @@ model PasswordResetToken {
   user User @relation(fields: [userId], references: [id], onUpdate: NoAction, onDelete: Cascade)
 
   @@map("PasswordResetToken")
+}
+
+model Review {
+  id        Int      @id @default(autoincrement()) @map("Id") @db.Int
+  productId Int      @map("ProductId") @db.Int
+  userId    Int      @map("UserId") @db.Int
+  rating    Int      @map("Rating") @db.Int
+  comment   String?  @map("Comment") @db.NVarChar(1000)
+  createdAt DateTime @default(now()) @map("CreatedAt") @db.DateTime2
+
+  product Product @relation(fields: [productId], references: [id], onUpdate: NoAction, onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onUpdate: NoAction, onDelete: NoAction)
+
+  @@unique([productId, userId])
+  @@map("Review")
+}
+
+model Certification {
+  id          Int      @id @default(autoincrement()) @map("Id") @db.Int
+  batchId     Int?     @map("BatchId") @db.Int
+  productId   Int?     @map("ProductId") @db.Int
+  name        String   @map("Name") @db.NVarChar(200)
+  type        String   @map("Type") @db.NVarChar(50)
+  issuer      String   @map("Issuer") @db.NVarChar(200)
+  issueDate   DateTime @map("IssueDate") @db.Date
+  expiryDate  DateTime? @map("ExpiryDate") @db.Date
+  fileUrl     String   @map("FileUrl") @db.NVarChar(500)
+  description String?  @map("Description") @db.NVarChar(1000)
+  verified    Boolean  @default(false) @map("Verified") @db.Bit
+  createdAt   DateTime @default(now()) @map("CreatedAt") @db.DateTime2
+
+  batch   Batch?   @relation(fields: [batchId], references: [id], onUpdate: NoAction, onDelete: Cascade)
+  product Product? @relation(fields: [productId], references: [id], onUpdate: NoAction, onDelete: Cascade)
+
+  @@map("Certification")
 }

@@ -26,10 +26,15 @@ async function apiRequest<TResponse>(path: string, options: RequestOptions = {})
     }
   }
 
-  const requestHeaders = new Headers(headers);
-  if (body && !requestHeaders.has("Content-Type")) {
+  // Chỉ tạo Headers nếu headers không phải undefined
+  // Nếu headers === undefined, nghĩa là đang upload file, không set Content-Type
+  const requestHeaders = headers === undefined ? new Headers() : new Headers(headers);
+  
+  // Chỉ set Content-Type cho JSON nếu không phải FormData
+  if (body && !(body instanceof FormData) && !requestHeaders.has("Content-Type")) {
     requestHeaders.set("Content-Type", "application/json");
   }
+  
   if (token) {
     console.log("Setting Authorization header with token:", token.substring(0, 20) + "...");
     requestHeaders.set("Authorization", `Bearer ${token}`);
@@ -144,6 +149,21 @@ export const apiClient = {
       body: form as any,
       // override headers: let apiRequest skip default JSON header
       headers: undefined,
+    });
+  },
+
+  /**
+   * Upload batch document (chứng từ) lên IPFS
+   * @param formData - FormData chứa file
+   * @param token - JWT token
+   * @returns IPFS CID và SHA-256 hash
+   */
+  uploadBatchDocument(formData: FormData, token: string) {
+    return apiRequest<{ ipfsCid: string; hashSha256: string; fileUrl: string }>("/uploads/batch-document", {
+      method: "POST",
+      token,
+      body: formData as any,
+      headers: undefined, // Let browser set Content-Type with boundary
     });
   },
 
@@ -262,6 +282,229 @@ export const apiClient = {
       method: "POST",
       token,
       headers,
+    });
+  },
+
+  // Batch verification
+  verifyBatch(id: number, token: string) {
+    return apiRequest<{
+      anchored: boolean;
+      verified: boolean;
+      onChainHash?: string;
+      message: string;
+    }>(`/batches/${id}/verify`, { token });
+  },
+
+  // Review APIs
+  createReview(productId: number, rating: number, comment: string | undefined, token: string) {
+    return apiRequest<{
+      id: number;
+      productId: number;
+      userId: number;
+      rating: number;
+      comment: string | null;
+      createdAt: string;
+    }>(`/products/${productId}/reviews`, {
+      method: "POST",
+      token,
+      body: JSON.stringify({ rating, comment }),
+    });
+  },
+
+  getProductReviews(productId: number, token?: string) {
+    return apiRequest<Array<{
+      id: number;
+      productId: number;
+      userId: number;
+      rating: number;
+      comment: string | null;
+      createdAt: string;
+      user?: { id: number; email: string };
+    }>>(`/products/${productId}/reviews`, { token });
+  },
+
+  getProductRatingStats(productId: number, token?: string) {
+    return apiRequest<{
+      averageRating: number;
+      totalReviews: number;
+      ratingDistribution: Array<{ rating: number; count: number }>;
+    }>(`/products/${productId}/reviews/stats`, { token });
+  },
+
+  getMyReviews(token: string) {
+    return apiRequest<Array<{
+      id: number;
+      productId: number;
+      userId: number;
+      rating: number;
+      comment: string | null;
+      createdAt: string;
+    }>>("/reviews/me", { token });
+  },
+
+  deleteReview(id: number, token: string) {
+    return apiRequest<{ message: string }>(`/reviews/${id}`, {
+      method: "DELETE",
+      token,
+    });
+  },
+
+  // Admin APIs
+  adminGetUsers(page: number, limit: number, role: string | undefined, token: string) {
+    return apiRequest<{
+      data: Array<{
+        id: number;
+        email: string;
+        role: string;
+        walletAddress: string;
+        createdAt: string;
+        _count: {
+          products: number;
+          buyerOrders: number;
+          sellerOrders: number;
+        };
+      }>;
+      pagination: { page: number; limit: number; total: number; totalPages: number };
+    }>("/admin/users", { token, searchParams: { page, limit, role } });
+  },
+
+  adminUpdateUserRole(userId: number, role: string, token: string) {
+    return apiRequest<{ id: number; email: string; role: string }>(`/admin/users/${userId}/role`, {
+      method: "PATCH",
+      token,
+      body: JSON.stringify({ role }),
+    });
+  },
+
+  adminGetProducts(page: number, limit: number, token: string) {
+    return apiRequest<{
+      data: Array<any>;
+      pagination: { page: number; limit: number; total: number; totalPages: number };
+    }>("/admin/products", { token, searchParams: { page, limit } });
+  },
+
+  adminDeleteProduct(productId: number, token: string) {
+    return apiRequest<{ message: string }>(`/admin/products/${productId}`, {
+      method: "DELETE",
+      token,
+    });
+  },
+
+  adminGetOrders(page: number, limit: number, status: string | undefined, token: string) {
+    return apiRequest<{
+      data: Array<any>;
+      pagination: { page: number; limit: number; total: number; totalPages: number };
+    }>("/admin/orders", { token, searchParams: { page, limit, status } });
+  },
+
+  adminGetStats(token: string) {
+    return apiRequest<{
+      overview: {
+        totalUsers: number;
+        totalProducts: number;
+        totalOrders: number;
+        totalBatches: number;
+        totalReviews: number;
+        totalRevenueWei: string;
+      };
+      usersByRole: Array<{ role: string; count: number }>;
+      ordersByStatus: Array<{ status: string; count: number }>;
+      recentOrders: Array<{
+        id: number;
+        buyerEmail: string;
+        productName: string;
+        totalWei: string;
+        status: string;
+        createdAt: string;
+      }>;
+    }>("/admin/stats", { token });
+  },
+
+  // Certification APIs
+  createCertification(
+    data: {
+      batchId?: number;
+      productId?: number;
+      name: string;
+      type: string;
+      issuer: string;
+      issueDate: string;
+      expiryDate?: string;
+      fileUrl: string;
+      description?: string;
+      verified?: boolean;
+    },
+    token: string
+  ) {
+    return apiRequest<{
+      id: number;
+      batchId: number | null;
+      productId: number | null;
+      name: string;
+      type: string;
+      issuer: string;
+      issueDate: string;
+      expiryDate: string | null;
+      fileUrl: string;
+      description: string | null;
+      verified: boolean;
+      createdAt: string;
+    }>("/certifications", {
+      method: "POST",
+      token,
+      body: JSON.stringify(data),
+    });
+  },
+
+  getBatchCertifications(batchId: number, token?: string) {
+    return apiRequest<Array<{
+      id: number;
+      batchId: number | null;
+      productId: number | null;
+      name: string;
+      type: string;
+      issuer: string;
+      issueDate: string;
+      expiryDate: string | null;
+      fileUrl: string;
+      description: string | null;
+      verified: boolean;
+      createdAt: string;
+    }>>(`/batches/${batchId}/certifications`, { token });
+  },
+
+  getProductCertifications(productId: number, token?: string) {
+    return apiRequest<Array<{
+      id: number;
+      batchId: number | null;
+      productId: number | null;
+      name: string;
+      type: string;
+      issuer: string;
+      issueDate: string;
+      expiryDate: string | null;
+      fileUrl: string;
+      description: string | null;
+      verified: boolean;
+      createdAt: string;
+    }>>(`/products/${productId}/certifications`, { token });
+  },
+
+  verifyCertification(id: number, verified: boolean, token: string) {
+    return apiRequest<{
+      id: number;
+      verified: boolean;
+    }>(`/certifications/${id}/verify`, {
+      method: "PATCH",
+      token,
+      body: JSON.stringify({ verified }),
+    });
+  },
+
+  deleteCertification(id: number, token: string) {
+    return apiRequest<{ message: string }>(`/certifications/${id}`, {
+      method: "DELETE",
+      token,
     });
   },
 

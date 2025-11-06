@@ -1,10 +1,11 @@
-﻿import { Module } from "@nestjs/common";
+import { Module } from "@nestjs/common";
 import { PrismaModule } from "../prisma/prisma.module";
+import { BlockchainModule } from "../blockchain/blockchain.module";
 import { BatchesService } from "./batches.service";
 import { BatchesController } from "./batches.controller";
 
 @Module({
-  imports: [PrismaModule],
+  imports: [PrismaModule, BlockchainModule],
   controllers: [BatchesController],
   providers: [BatchesService],
   exports: [BatchesService],

@@ -1,12 +1,15 @@
 import { useMemo, useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { CheckoutModal } from "@/components/CheckoutModal";
+import { ReviewSection } from "@/components/ReviewSection";
+import { CertificationsList } from "@/components/CertificationsList";
 import { apiClient } from "@/lib/api-client";
 import { useAuth } from "@/context/AuthContext";
 import { formatDate, formatWeiToEth } from "@/lib/utils";
@@ -20,7 +23,7 @@ const ProductDetail = () => {
 
   const productId = Number(id);
   const [quantity, setQuantity] = useState(1);
-  const [shippingAddress, setShippingAddress] = useState("");
+  const [checkoutOpen, setCheckoutOpen] = useState(false);
 
   const {
     data: product,
@@ -33,29 +36,12 @@ const ProductDetail = () => {
     staleTime: 1000 * 30,
   });
 
-  const orderMutation = useMutation({
-    mutationFn: () =>
-      apiClient.createOrder(
-        {
-          productId,
-          quantity,
-          shippingAddress: shippingAddress.trim() || undefined,
-        },
-        token!,
-      ),
-    onSuccess: () => {
-      toast.success("Tạo đơn hàng thành công");
-      setShippingAddress("");
-      setQuantity(1);
-      queryClient.invalidateQueries({ queryKey: ["orders"] });
-      queryClient.invalidateQueries({ queryKey: ["product", productId] });
-      queryClient.invalidateQueries({ queryKey: ["products"] });
-    },
-    onError: (cause: unknown) => {
-      const message = cause instanceof Error ? cause.message : "Không thể tạo đơn hàng";
-      toast.error(message);
-    },
-  });
+  const handleCheckoutSuccess = () => {
+    setQuantity(1);
+    queryClient.invalidateQueries({ queryKey: ["orders"] });
+    queryClient.invalidateQueries({ queryKey: ["product", productId] });
+    queryClient.invalidateQueries({ queryKey: ["products"] });
+  };
 
   const totalEth = useMemo(() => {
     if (!product) {
@@ -78,14 +64,14 @@ const ProductDetail = () => {
   const handleOrder = () => {
     if (!product) return;
     if (product.stock <= 0) {
-      toast.error("San pham da het hang");
+      toast.error("Sản phẩm đã hết hàng");
       return;
     }
     if (quantity > product.stock) {
-      toast.error("So luong vuot qua ton kho");
+      toast.error("Số lượng vượt quá tồn kho");
       return;
     }
-    orderMutation.mutate();
+    setCheckoutOpen(true);
   };
 
   const renderContent = () => {
@@ -207,23 +193,14 @@ const ProductDetail = () => {
             </div>
           </div>
 
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Địa chỉ giao hàng (không bắt buộc)</label>
-            <Input
-              placeholder="Nhập địa chỉ giao hàng"
-              value={shippingAddress}
-              onChange={(event) => setShippingAddress(event.target.value)}
-            />
-          </div>
-
           <Button
             size="lg"
             className="flex w-full items-center justify-center gap-2 bg-gradient-hero hover:opacity-90"
             onClick={handleOrder}
-            disabled={orderMutation.isLoading || product.stock <= 0}
+            disabled={product.stock <= 0}
           >
             <ShoppingCart className="h-5 w-5" />
-            {orderMutation.isLoading ? "Đang xử lý..." : `Mua ngay - ${totalEth} ETH`}
+            {`Mua ngay - ${totalEth} ETH`}
           </Button>
 
           <Link to={`/trace/${batchCode}`}>
@@ -269,9 +246,29 @@ const ProductDetail = () => {
         </div>
 
         {renderContent()}
+
+        {product && (
+          <div className="mt-12 space-y-12">
+            {/* Phần chứng nhận */}
+            <CertificationsList productId={product.id} />
+            
+            {/* Phần đánh giá */}
+            <ReviewSection productId={product.id} />
+          </div>
+        )}
       </div>
 
       <Footer />
+
+      {product && (
+        <CheckoutModal
+          open={checkoutOpen}
+          onOpenChange={setCheckoutOpen}
+          product={product}
+          quantity={quantity}
+          onSuccess={handleCheckoutSuccess}
+        />
+      )}
     </div>
   );
 };

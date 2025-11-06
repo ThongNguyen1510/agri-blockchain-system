@@ -6,6 +6,7 @@ import { Roles } from "../auth/decorators/roles.decorator";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { UserRole } from "../users/user-role.enum";
 import { BatchesService } from "./batches.service";
+import { BlockchainService } from "../blockchain/blockchain.service";
 import { CreateBatchDto } from "./dto/create-batch.dto";
 import { UpdateBatchDto } from "./dto/update-batch.dto";
 import { BatchDto } from "./dto/batch.dto";
@@ -16,7 +17,10 @@ import { BatchListItemDto } from "./dto/batch-list-item.dto";
 @UseGuards(JwtAuthGuard)
 @Controller("batches")
 export class BatchesController {
-  constructor(private readonly batchesService: BatchesService) {}
+  constructor(
+    private readonly batchesService: BatchesService,
+    private readonly blockchainService: BlockchainService,
+  ) {}
 
   @Roles(UserRole.Seller)
   @Post()
@@ -57,5 +61,39 @@ export class BatchesController {
   ): Promise<BatchDto> {
     const batch = await this.batchesService.update(id, dto, user.id, user.role as UserRole);
     return BatchDto.fromEntity(batch);
+  }
+
+  @Get(":id/verify")
+  async verifyBatch(
+    @CurrentUser() user: CurrentUserType,
+    @Param("id", ParseIntPipe) id: number,
+  ): Promise<{ anchored: boolean; verified: boolean; onChainHash?: string; message: string }> {
+    const batch = await this.batchesService.findOne(id, user.id, user.role as UserRole);
+    
+    if (!this.blockchainService.isAvailable()) {
+      return {
+        anchored: false,
+        verified: false,
+        message: "Blockchain service not available",
+      };
+    }
+
+    const result = await this.blockchainService.verifyBatchHash(batch.id, {
+      batchCode: batch.batchCode,
+      farmName: batch.farmName ?? "",
+      harvestDate: batch.harvestDate?.toISOString() ?? "",
+      variety: batch.variety ?? "",
+      notes: batch.notes ?? "",
+      ipfsCid: batch.ipfsCid ?? "",
+    });
+
+    let message = "Batch not anchored on blockchain";
+    if (result.anchored && result.verified) {
+      message = "Batch verified successfully on blockchain";
+    } else if (result.anchored && !result.verified) {
+      message = "Batch anchored but hash mismatch";
+    }
+
+    return { ...result, message };
   }
 }

@@ -1,4 +1,4 @@
-﻿import { ApiProperty } from "@nestjs/swagger";
+import { ApiProperty } from "@nestjs/swagger";
 
 export class BatchListItemDto {
   @ApiProperty()
@@ -24,6 +24,9 @@ export class BatchListItemDto {
 
   @ApiProperty()
   hashSha256!: string | null;
+
+  @ApiProperty()
+  documentUrl!: string | null;
 
   @ApiProperty()
   createdAt!: string;

@@ -2,12 +2,13 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
 import { useWallet } from "@/context/WalletContext";
-import { Leaf, ShoppingCart, Search, User, Store } from "lucide-react";
+import { Leaf, ShoppingCart, Search, User, Store, Shield } from "lucide-react";
 
 const LABEL_PRODUCTS = "Chợ nông sản";
 const LABEL_ORDERS = "Đơn hàng";
 const LABEL_TRACE = "Truy xuất";
 const LABEL_SELLER_DASHBOARD = "Bán hàng";
+const LABEL_ADMIN_PANEL = "Quản trị";
 const LABEL_CONNECTING = "Đang kết nối...";
 const LABEL_CONNECT_WALLET = "Kết nối ví";
 const LABEL_SIGN_OUT = "Đăng xuất";
@@ -91,6 +92,19 @@ const Navbar = () => {
                 <div className="flex items-center gap-1">
                   <Store className="h-4 w-4" />
                   {LABEL_SELLER_DASHBOARD}
+                </div>
+              </Link>
+            )}
+            {token && user?.role === "Admin" && (
+              <Link
+                to="/admin"
+                className={`text-sm font-medium transition-colors hover:text-primary ${
+                  isActive("/admin") ? "text-primary" : "text-muted-foreground"
+                }`}
+              >
+                <div className="flex items-center gap-1">
+                  <Shield className="h-4 w-4" />
+                  {LABEL_ADMIN_PANEL}
                 </div>
               </Link>
             )}

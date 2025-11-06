@@ -6,6 +6,7 @@ import { UserRole } from "../users/user-role.enum";
 import { CreateBatchDto } from "./dto/create-batch.dto";
 import { UpdateBatchDto } from "./dto/update-batch.dto";
 import { BatchListItemDto } from "./dto/batch-list-item.dto";
+import * as crypto from "crypto";
 
 @Injectable()
 export class BatchesService {
@@ -13,6 +14,23 @@ export class BatchesService {
 
   async create(dto: CreateBatchDto, creatorId: number): Promise<Batch> {
     const batchCode = dto.batchCode ?? this.generateBatchCode();
+    
+    // Tự động tạo hash SHA-256 từ dữ liệu batch
+    const batchData = {
+      batchCode,
+      farmName: dto.farmName ?? null,
+      harvestDate: dto.harvestDate ?? null,
+      variety: dto.variety ?? dto.productName ?? null,
+      notes: dto.notes ?? dto.quantityNote ?? null,
+      creatorId,
+    };
+    
+    const dataString = JSON.stringify(batchData);
+    const hashSha256 = "0x" + crypto.createHash("sha256").update(dataString).digest("hex");
+    
+    // Tạo mock IPFS CID (trong production sẽ upload lên IPFS thật)
+    const ipfsCid = `Qm${crypto.randomBytes(22).toString("base64").replace(/[+/=]/g, "")}`;
+    
     return this.prisma.batch.create({
       data: {
         batchCode,
@@ -20,8 +38,9 @@ export class BatchesService {
         harvestDate: dto.harvestDate ? new Date(dto.harvestDate) : null,
         variety: dto.variety ?? dto.productName ?? null,
         notes: dto.notes ?? dto.quantityNote ?? null,
-        ipfsCid: dto.ipfsCid ?? null,
-        hashSha256: dto.hashSha256 ?? null,
+        ipfsCid,
+        hashSha256,
+        documentUrl: dto.documentUrl ?? null,
         owner: {
           connect: { id: creatorId },
         },
@@ -117,6 +136,7 @@ export class BatchesService {
     dto.harvestDate = batch.harvestDate ? batch.harvestDate.toISOString() : null;
     dto.ipfsCid = batch.ipfsCid ?? null;
     dto.hashSha256 = batch.hashSha256 ?? null;
+    dto.documentUrl = (batch as any).documentUrl ?? null;
     dto.createdAt = batch.createdAt.toISOString();
     return dto;
   }
