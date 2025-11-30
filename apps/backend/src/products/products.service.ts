@@ -1,5 +1,6 @@
 import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import type { Batch, Product, User } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import { UserRole } from "../users/user-role.enum";
 import { PrismaService } from "../prisma/prisma.service";
 import { CreateProductDto } from "./dto/create-product.dto";
@@ -31,7 +32,7 @@ export class ProductsService {
         sellerId,
         name: dto.name,
         description: dto.description ?? null,
-        priceWei: BigInt(String(dto.priceWei)),
+        priceWei: new Prisma.Decimal(dto.priceWei),
         stock: dto.stock,
         coverImageUrl: dto.coverImageUrl ?? null,
       },
@@ -118,7 +119,7 @@ export class ProductsService {
         batchId: dto.batchId ?? undefined,
         name: dto.name ?? undefined,
         description: dto.description ?? undefined,
-        priceWei: dto.priceWei !== undefined ? BigInt(String(dto.priceWei)) : undefined,
+        priceWei: dto.priceWei !== undefined ? new Prisma.Decimal(dto.priceWei) : undefined,
         stock: dto.stock ?? undefined,
         coverImageUrl: dto.coverImageUrl ?? undefined,
       },

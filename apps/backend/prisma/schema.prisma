@@ -2,6 +2,21 @@ generator client {
   provider = "prisma-client-js"
 }
 
+model BatchOwnershipHistory {
+  id        Int      @id @default(autoincrement()) @map("Id") @db.Int
+  batchId   Int      @map("BatchId") @db.Int
+  fromRole  String   @map("FromRole") @db.NVarChar(50)
+  toRole    String   @map("ToRole") @db.NVarChar(50)
+  fromName  String   @map("FromName") @db.NVarChar(100)
+  toName    String   @map("ToName") @db.NVarChar(100)
+  txHash    String?  @map("TxHash") @db.NVarChar(100)
+  createdAt DateTime @default(now()) @map("CreatedAt") @db.DateTime2
+
+  batch Batch @relation(fields: [batchId], references: [id], onUpdate: NoAction, onDelete: NoAction)
+
+  @@map("BatchOwnershipHistory")
+}
+
 datasource db {
   provider = "sqlserver"
   url      = env("DATABASE_URL")
@@ -27,21 +42,22 @@ model User {
 }
 
 model Batch {
-  id          Int       @id @default(autoincrement()) @map("Id") @db.Int
-  batchCode   String    @unique @map("BatchCode") @db.NVarChar(50)
-  farmName    String?   @map("FarmName") @db.NVarChar(100)
-  harvestDate DateTime? @map("HarvestDate") @db.Date
-  variety     String?   @map("Variety") @db.NVarChar(100)
-  notes       String?   @map("Notes") @db.NVarChar(500)
-  ipfsCid     String?   @map("IpfsCid") @db.NVarChar(255)
-  hashSha256  String?   @map("HashSha256") @db.NVarChar(255)
-  documentUrl String?   @map("DocumentUrl") @db.NVarChar(500)
-  createdBy   Int       @map("CreatedBy") @db.Int
-  createdAt   DateTime  @default(now()) @map("CreatedAt") @db.DateTime2
+  id           Int       @id @default(autoincrement()) @map("Id") @db.Int
+  batchCode    String    @unique @map("BatchCode") @db.NVarChar(50)
+  farmName     String?   @map("FarmName") @db.NVarChar(100)
+  harvestDate  DateTime? @map("HarvestDate") @db.DateTime2
+  variety      String?   @map("Variety") @db.NVarChar(100)
+  notes        String?   @map("Notes") @db.NVarChar(500)
+  ipfsCid      String?   @map("IpfsCid") @db.NVarChar(100)
+  hashSha256   String?   @map("HashSha256") @db.NVarChar(100)
+  documentUrl  String?   @map("DocumentUrl") @db.NVarChar(500)
+  createdBy    Int       @map("CreatedBy") @db.Int
+  createdAt    DateTime  @default(now()) @map("CreatedAt") @db.DateTime2
 
   owner           User            @relation("UserBatches", fields: [createdBy], references: [id], onUpdate: NoAction, onDelete: NoAction)
   products        Product[]
   certifications  Certification[]
+  ownershipHistory BatchOwnershipHistory[]
 
   @@map("Batch")
 }
@@ -52,7 +68,7 @@ model Product {
   sellerId      Int       @map("SellerId") @db.Int
   name          String    @map("Name") @db.NVarChar(100)
   description   String?   @map("Description") @db.NVarChar(500)
-  priceWei      BigInt    @map("PriceWei") @db.BigInt
+  priceWei      Decimal   @map("PriceWei") @db.Decimal(38, 0)
   stock         Int       @map("Stock") @db.Int
   coverImageUrl String?   @map("CoverImageUrl") @db.NVarChar(255)
   createdAt     DateTime  @default(now()) @map("CreatedAt") @db.DateTime2
@@ -73,7 +89,7 @@ model Order {
   sellerId        Int       @map("SellerId") @db.Int
   productId       Int       @map("ProductId") @db.Int
   quantity        Int       @map("Quantity") @db.Int
-  totalWei        BigInt    @map("TotalWei") @db.BigInt
+  totalWei        Decimal   @map("TotalWei") @db.Decimal(38, 0)
   status          String    @map("Status") @db.NVarChar(20)
   shippingAddress String?   @map("ShippingAddress") @db.NVarChar(255)
   createdAt       DateTime  @default(now()) @map("CreatedAt") @db.DateTime2

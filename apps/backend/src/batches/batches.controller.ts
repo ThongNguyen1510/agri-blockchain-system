@@ -11,6 +11,9 @@ import { CreateBatchDto } from "./dto/create-batch.dto";
 import { UpdateBatchDto } from "./dto/update-batch.dto";
 import { BatchDto } from "./dto/batch.dto";
 import { BatchListItemDto } from "./dto/batch-list-item.dto";
+import { TransferOwnershipDto } from "./dto/transfer-ownership.dto";
+import { TransportUpdateDto } from "./dto/transport-update.dto";
+import { Public } from "../auth/decorators/public.decorator";
 
 @ApiTags("batches")
 @ApiBearerAuth()
@@ -95,5 +98,81 @@ export class BatchesController {
     }
 
     return { ...result, message };
+  }
+
+  // Anchor batch hash on-chain and return tx hash
+  @Roles(UserRole.Seller)
+  @Post(":id/anchor")
+  async anchorBatch(
+    @CurrentUser() user: CurrentUserType,
+    @Param("id", ParseIntPipe) id: number,
+  ): Promise<{ txHash: string }> {
+    const batch = await this.batchesService.findOne(id, user.id, user.role as UserRole);
+
+    if (!this.blockchainService.isAvailable()) {
+      throw new Error("Blockchain service not available");
+    }
+
+    const tx = await this.blockchainService.anchorBatchHashTx(batch.id, {
+      batchCode: batch.batchCode,
+      farmName: batch.farmName ?? "",
+      harvestDate: batch.harvestDate?.toISOString() ?? "",
+      variety: batch.variety ?? "",
+      notes: batch.notes ?? "",
+      ipfsCid: batch.ipfsCid ?? "",
+    });
+    return tx;
+  }
+
+  // ---- Ownership Transfer ----
+  @Post(":id/ownership-transfer")
+  async transferOwnership(
+    @CurrentUser() user: CurrentUserType,
+    @Param("id", ParseIntPipe) id: number,
+    @Body() dto: TransferOwnershipDto,
+  ) {
+    return this.batchesService.transferOwnership(id, user, dto);
+  }
+
+  @Get(":id/ownership-history")
+  async getOwnershipHistory(
+    @Param("id", ParseIntPipe) id: number,
+  ) {
+    return this.batchesService.getOwnershipHistory(id);
+  }
+
+  // ---- Transport Update (location, temperature) ----
+  @Post(":id/transport-updates")
+  async addTransportUpdate(
+    @CurrentUser() user: CurrentUserType,
+    @Param("id", ParseIntPipe) id: number,
+    @Body() dto: TransportUpdateDto,
+  ) {
+    return this.batchesService.addTransportUpdate(id, user, dto);
+  }
+
+  // ---- Public Trace endpoints (no auth) ----
+  @Public()
+  @Get("public/by-code/:batchCode")
+  async getByCodePublic(
+    @Param("batchCode") batchCode: string,
+  ): Promise<BatchDto> {
+    const batch = await this.batchesService.findByBatchCodePublic(batchCode);
+    if (!batch) {
+      throw new Error("Batch not found");
+    }
+    return BatchDto.fromEntity(batch);
+  }
+
+  @Public()
+  @Get("public/by-code/:batchCode/ownership-history")
+  async getOwnershipHistoryByCodePublic(
+    @Param("batchCode") batchCode: string,
+  ) {
+    const batch = await this.batchesService.findByBatchCodePublic(batchCode);
+    if (!batch) {
+      throw new Error("Batch not found");
+    }
+    return this.batchesService.getOwnershipHistoryPublic(batch.id);
   }
 }

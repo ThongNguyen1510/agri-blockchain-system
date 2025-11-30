@@ -5,6 +5,7 @@ import type {
   DashboardSummaryDto,
   OrderDto,
   ProductDto,
+  OwnershipHistoryDto,
 } from "@/types/api";
 
 const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:3000";
@@ -84,6 +85,44 @@ export const apiClient = {
       method: "POST",
       body: JSON.stringify({ email, password }),
     });
+  },
+
+  // Ownership transfer & history
+  transferBatchOwnership(batchId: number, body: { toRole: string; toName: string }, token: string) {
+    return apiRequest<OwnershipHistoryDto>(`/batches/${batchId}/ownership-transfer`, {
+      method: "POST",
+      token,
+      body: JSON.stringify(body),
+    });
+  },
+
+  getBatchOwnershipHistory(batchId: number, token: string) {
+    return apiRequest<OwnershipHistoryDto[]>(`/batches/${batchId}/ownership-history`, { token });
+  },
+
+  // Anchor batch on-chain
+  anchorBatch(batchId: number, token: string) {
+    return apiRequest<{ txHash: string }>(`/batches/${batchId}/anchor`, {
+      method: "POST",
+      token,
+    });
+  },
+
+  // Transport update (location, temperature)
+  addTransportUpdate(batchId: number, body: { location: string; temperature: number }, token: string) {
+    return apiRequest<OwnershipHistoryDto>(`/batches/${batchId}/transport-updates`, {
+      method: "POST",
+      token,
+      body: JSON.stringify(body),
+    });
+  },
+
+  // Public trace endpoints (no auth)
+  getBatchByCodePublic(batchCode: string) {
+    return apiRequest<any>(`/batches/public/by-code/${encodeURIComponent(batchCode)}`);
+  },
+  getOwnershipHistoryByCodePublic(batchCode: string) {
+    return apiRequest<OwnershipHistoryDto[]>(`/batches/public/by-code/${encodeURIComponent(batchCode)}/ownership-history`);
   },
 
   register(email: string, password: string, role: string, walletAddress: string) {

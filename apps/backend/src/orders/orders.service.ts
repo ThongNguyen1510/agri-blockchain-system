@@ -1,5 +1,6 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import type { Order, Product } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import { UserRole } from "../users/user-role.enum";
 import { PrismaService } from "../prisma/prisma.service";
 import { OrderStatus } from "./order-status.enum";
@@ -35,7 +36,7 @@ export class OrdersService {
       throw new BadRequestException("Seller cannot order their own product");
     }
 
-    const totalWei = product.priceWei * BigInt(dto.quantity);
+    const totalWei = new Prisma.Decimal(product.priceWei).mul(dto.quantity);
 
     const order = await this.prisma.$transaction(async (tx) => {
       const created = await tx.order.create({
@@ -180,7 +181,7 @@ export class OrdersService {
         }
       }
 
-      const totalWei = product.priceWei * BigInt(newQuantity);
+      const totalWei = new Prisma.Decimal(product.priceWei).mul(newQuantity);
       return tx.order.update({
         where: { id: orderId },
         data: {

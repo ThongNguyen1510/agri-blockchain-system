@@ -52,6 +52,17 @@ export interface OrderProductSummaryDto {
   priceWei: string;
 }
 
+export interface OwnershipHistoryDto {
+  id: number;
+  batchId: number;
+  fromRole: string;
+  toRole: string;
+  fromName: string;
+  toName: string;
+  txHash?: string | null;
+  createdAt: string;
+}
+
 export type OrderStatus =
   | "Pending"
   | "Held"

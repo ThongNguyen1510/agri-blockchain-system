@@ -12,27 +12,48 @@ import QRCode from "react-qr-code";
 import { useAuth } from "@/context/AuthContext";
 import { apiClient } from "@/lib/api-client";
 import type { BatchSummaryDto } from "@/types/api";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { formatDate } from "@/lib/utils";
 import { CertificationsList } from "@/components/CertificationsList";
+import type { OwnershipHistoryDto } from "@/types/api";
 
 const Trace = () => {
   const { batchId } = useParams<{ batchId?: string }>();
-  const { token } = useAuth();
+  const { token, user } = useAuth();
+  const queryClient = useQueryClient();
   const [searchBatch, setSearchBatch] = useState(batchId ?? "");
   const [selectedBatch, setSelectedBatch] = useState<BatchSummaryDto | null>(null);
+  const [publicMode, setPublicMode] = useState<boolean>(false);
   const [verificationStatus, setVerificationStatus] = useState<{
     loading: boolean;
     result?: { anchored: boolean; verified: boolean; onChainHash?: string; message: string };
   }>({ loading: false });
 
-  const {
-    data: batches,
-    isLoading,
-    error,
-  } = useQuery<BatchSummaryDto[], Error>({
-    queryKey: ["batches", "me"],
+  // Transport update form state
+  const [transportLocation, setTransportLocation] = useState("");
+  const [transportTemp, setTransportTemp] = useState<string>("");
+  const [transportLoading, setTransportLoading] = useState(false);
+  const isBuyer = (user?.role ?? "").toLowerCase() === "buyer";
+
+  // Top-level ownership history query (auth path)
+  const { data: ownershipHistoryPrivate } = useQuery<OwnershipHistoryDto[]>({
+    queryKey: ["ownership-history", selectedBatch?.id, token],
+    queryFn: () => apiClient.getBatchOwnershipHistory(selectedBatch!.id, token!),
+    enabled: Boolean(token && selectedBatch?.id),
+    staleTime: 1000 * 30,
+  });
+  // Public ownership history when no token and have batchCode
+  const { data: ownershipHistoryPublic } = useQuery<OwnershipHistoryDto[]>({
+    queryKey: ["ownership-history-public", selectedBatch?.batchCode, !token],
+    queryFn: () => apiClient.getOwnershipHistoryByCodePublic(selectedBatch!.batchCode),
+    enabled: Boolean(!token && selectedBatch?.batchCode),
+    staleTime: 1000 * 30,
+  });
+  const ownershipHistory = publicMode ? ownershipHistoryPublic : ownershipHistoryPrivate;
+
+  const { data: batches, isLoading, error } = useQuery<BatchSummaryDto[], Error>({
+    queryKey: ["batches", "me", token],
     queryFn: () => apiClient.getBatchSummaries(token!),
     enabled: Boolean(token),
     staleTime: 1000 * 30,
@@ -52,17 +73,63 @@ const Trace = () => {
   }, [batchId]);
 
   useEffect(() => {
-    if (batchId && sortedBatches.length) {
-      const found = sortedBatches.find(
-        (item) => item.batchCode.toLowerCase() === batchId.toLowerCase(),
-      );
-      if (found) {
-        setSelectedBatch(found);
+    if (!batchId) return;
+    const tryLoad = async () => {
+      if (token && sortedBatches.length) {
+        const found = sortedBatches.find((item) => item.batchCode.toLowerCase() === batchId.toLowerCase());
+        if (found) {
+          setSelectedBatch(found);
+          setPublicMode(false);
+          return;
+        }
       }
-    }
-  }, [batchId, sortedBatches]);
+      // Fallback to public when not found in user's list
+      try {
+        const data = await apiClient.getBatchByCodePublic(batchId);
+        const mapped: BatchSummaryDto = {
+          id: data.id,
+          batchCode: data.batchCode,
+          productName: data.variety ?? data.notes ?? data.batchCode,
+          status: data.hashSha256 ? "Đã khóa" : "Nháp",
+          quantityNote: data.notes ?? null,
+          harvestDate: data.harvestDate ?? null,
+          ipfsCid: data.ipfsCid ?? null,
+          hashSha256: data.hashSha256 ?? null,
+          createdAt: data.createdAt,
+        };
+        setSelectedBatch(mapped);
+        setPublicMode(true);
+      } catch {}
+    };
+    tryLoad();
+  }, [batchId, sortedBatches, token]);
 
-  const handleSearch = () => {
+  // Public: load batch by code when no token
+  useEffect(() => {
+    const loadPublic = async () => {
+      if (!batchId || token) return;
+      try {
+        const data = await apiClient.getBatchByCodePublic(batchId);
+        const mapped: BatchSummaryDto = {
+          id: data.id,
+          batchCode: data.batchCode,
+          productName: data.variety ?? data.notes ?? data.batchCode,
+          status: data.hashSha256 ? "Đã khóa" : "Nháp",
+          quantityNote: data.notes ?? null,
+          harvestDate: data.harvestDate ?? null,
+          ipfsCid: data.ipfsCid ?? null,
+          hashSha256: data.hashSha256 ?? null,
+          createdAt: data.createdAt,
+        };
+        setSelectedBatch(mapped);
+      } catch (e) {
+        // keep null
+      }
+    };
+    loadPublic();
+  }, [batchId, token]);
+
+  const handleSearch = async () => {
     const trimmed = searchBatch.trim();
     if (!trimmed) {
       toast.error("Vui lòng nhập mã lô hàng.");
@@ -70,23 +137,60 @@ const Trace = () => {
       return;
     }
 
-    if (!sortedBatches.length) {
-      toast.error("Chưa có dữ liệu lô hàng.");
-      return;
+    if (token && sortedBatches.length) {
+      const result = sortedBatches.find((item) => item.batchCode.toLowerCase() === trimmed.toLowerCase());
+      if (result) {
+        setSelectedBatch(result);
+        setPublicMode(false);
+        toast.success("Đã tải thông tin lô hàng.");
+        return;
+      }
     }
 
-    const result = sortedBatches.find(
-      (item) => item.batchCode.toLowerCase() === trimmed.toLowerCase(),
-    );
-
-    if (!result) {
+    // Fallback to public fetch
+    try {
+      const data = await apiClient.getBatchByCodePublic(trimmed);
+      const mapped: BatchSummaryDto = {
+        id: data.id,
+        batchCode: data.batchCode,
+        productName: data.variety ?? data.notes ?? data.batchCode,
+        status: data.hashSha256 ? "Đã khóa" : "Nháp",
+        quantityNote: data.notes ?? null,
+        harvestDate: data.harvestDate ?? null,
+        ipfsCid: data.ipfsCid ?? null,
+        hashSha256: data.hashSha256 ?? null,
+        createdAt: data.createdAt,
+      };
+      setSelectedBatch(mapped);
+      setPublicMode(true);
+      toast.success("Đã tải thông tin lô hàng (public).");
+    } catch {
       toast.error("Không tìm thấy lô hàng. Kiểm tra mã và thử lại.");
       setSelectedBatch(null);
+    }
+  };
+
+  const handleAddTransportUpdate = async () => {
+    if (!selectedBatch || !token) return;
+    const location = transportLocation.trim();
+    const temp = parseFloat(transportTemp);
+    if (!location || Number.isNaN(temp)) {
+      toast.error("Nhập địa điểm và nhiệt độ hợp lệ");
       return;
     }
-
-    setSelectedBatch(result);
-    toast.success("Đã tải thông tin lô hàng.");
+    try {
+      setTransportLoading(true);
+      await apiClient.addTransportUpdate(selectedBatch.id, { location, temperature: temp }, token);
+      setTransportLocation("");
+      setTransportTemp("");
+      toast.success("Đã ghi cập nhật vận chuyển");
+      await queryClient.invalidateQueries({ queryKey: ["ownership-history", selectedBatch.id] });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Không thể ghi cập nhật vận chuyển";
+      toast.error(msg);
+    } finally {
+      setTransportLoading(false);
+    }
   };
 
   const copyToClipboard = async (text: string, label: string) => {
@@ -95,6 +199,20 @@ const Trace = () => {
       toast.success(`Đã sao chép ${label} vào bộ nhớ tạm`);
     } catch {
       toast.error("Không thể sao chép");
+    }
+  };
+
+  const handleAnchorBlockchain = async () => {
+    if (!selectedBatch || !token) return;
+    try {
+      const { txHash } = await apiClient.anchorBatch(selectedBatch.id, token);
+      toast.success(`Đã ghi lên blockchain. TX: ${txHash.slice(0, 10)}...`);
+      // Re-verify after anchoring
+      const result = await apiClient.verifyBatch(selectedBatch.id, token);
+      setVerificationStatus({ loading: false, result });
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : "Anchor thất bại";
+      toast.error(msg);
     }
   };
 
@@ -162,6 +280,30 @@ const Trace = () => {
           </div>
         </Card>
 
+        {/* Transport update input: hide for Buyer and in public mode */}
+        {!publicMode && !isBuyer && token && (
+          <Card className="space-y-4 p-6">
+            <h3 className="text-xl font-semibold">Cập nhật vận chuyển</h3>
+            <div className="grid gap-3 md:grid-cols-3">
+              <Input
+                placeholder="Địa điểm (ví dụ: Kho Bình Dương)"
+                value={transportLocation}
+                onChange={(e) => setTransportLocation(e.target.value)}
+              />
+              <Input
+                placeholder="Nhiệt độ (°C)"
+                type="number"
+                value={transportTemp}
+                onChange={(e) => setTransportTemp(e.target.value)}
+              />
+              <Button onClick={handleAddTransportUpdate} disabled={transportLoading} className="gap-2">
+                {transportLoading ? "Đang ghi..." : "Ghi cập nhật"}
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">Mỗi cập nhật sẽ được lưu và có thể ghi on-chain kèm transaction hash.</p>
+          </Card>
+        )}
+
         <div className="grid gap-6 md:grid-cols-2">
           <Card className="space-y-4 p-6">
             <div className="flex items-center justify-between">
@@ -208,7 +350,7 @@ const Trace = () => {
           <Card className="space-y-4 p-6">
             <h3 className="text-xl font-semibold">Mã QR</h3>
             <div className="flex items-center justify-center rounded-lg bg-white p-6">
-              <QRCode value={selectedBatch.batchCode} size={200} />
+              <QRCode value={`${window.location.origin}/trace/${selectedBatch.batchCode}`} size={200} />
             </div>
             <p className="text-center text-sm text-muted-foreground">
               Quét mã để chia sẻ thông tin truy xuất cho đối tác và khách hàng.
@@ -280,15 +422,28 @@ const Trace = () => {
           </div>
 
           <div className="space-y-3">
-            <Button
-              variant="default"
-              className="w-full gap-2"
-              onClick={handleVerifyBlockchain}
-              disabled={verificationStatus.loading || !selectedBatch.hashSha256}
-            >
-              <ShieldCheck className="h-4 w-4" />
-              {verificationStatus.loading ? "Đang xác thực..." : "Xác thực trên Blockchain"}
-            </Button>
+            {!publicMode && !isBuyer && (
+              <Button
+                variant="default"
+                className="w-full gap-2"
+                onClick={handleVerifyBlockchain}
+                disabled={verificationStatus.loading || !selectedBatch.hashSha256}
+              >
+                <ShieldCheck className="h-4 w-4" />
+                {verificationStatus.loading ? "Đang xác thực..." : "Xác thực trên Blockchain"}
+              </Button>
+            )}
+
+            {/* Show anchor button if not anchored yet (hide for Buyer/public) */}
+            {selectedBatch.hashSha256 && (!verificationStatus.result || !verificationStatus.result.anchored) && !publicMode && !isBuyer && token && (
+              <Button
+                variant="outline"
+                className="w-full gap-2"
+                onClick={handleAnchorBlockchain}
+              >
+                Ghi lô hàng lên Blockchain (Anchor)
+              </Button>
+            )}
 
             {verificationStatus.result && (
               <div className={`rounded-lg border p-4 ${
@@ -332,6 +487,51 @@ const Trace = () => {
             )}
           </div>
         </Card>
+
+        {/* Ownership timeline */}
+        {selectedBatch && (
+          <Card className="space-y-4 p-6">
+            <div className="flex items-center gap-2">
+              <h3 className="text-xl font-semibold">Hành trình lô hàng</h3>
+            </div>
+            {ownershipHistory && ownershipHistory.length > 0 ? (
+              <ol className="relative ml-2 border-l pl-4">
+                {ownershipHistory.map((h) => (
+                  <li key={h.id} className="mb-4">
+                    <div className="absolute -left-1.5 mt-1 h-3 w-3 rounded-full bg-emerald-500" />
+                    <div className="text-sm font-semibold">
+                      {h.fromRole} → {h.toRole}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {(!publicMode && !isBuyer && h.fromName && h.toName)
+                        ? (<span>{h.fromName} → {h.toName} • {new Date(h.createdAt).toLocaleString()}</span>)
+                        : (<span>{new Date(h.createdAt).toLocaleString()}</span>)}
+                    </div>
+                    {h.txHash && (() => {
+                      const base = import.meta.env.VITE_EXPLORER_TX_BASE as string | undefined;
+                      if (base && base !== "local") {
+                        return (
+                          <Button
+                            variant="link"
+                            className="p-0 text-xs"
+                            onClick={() => window.open(`${base}${h.txHash}`, "_blank")}
+                          >
+                            Xem giao dịch: {h.txHash.slice(0, 12)}...
+                          </Button>
+                        );
+                      }
+                      return (
+                        <div className="mt-1 font-mono text-xs">Tx: {h.txHash}</div>
+                      );
+                    })()}
+                  </li>
+                ))}
+              </ol>
+            ) : (
+              <p className="text-sm text-muted-foreground">Chưa có lịch sử chuyển giao</p>
+            )}
+          </Card>
+        )}
 
         {/* Hiển thị chứng nhận nếu có batch được chọn */}
         {selectedBatch && (

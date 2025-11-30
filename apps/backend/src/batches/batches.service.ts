@@ -1,16 +1,22 @@
 import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { Batch } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
+import { BlockchainService } from "../blockchain/blockchain.service";
 import type { CurrentUserType } from "../auth/decorators/current-user.decorator";
 import { UserRole } from "../users/user-role.enum";
 import { CreateBatchDto } from "./dto/create-batch.dto";
 import { UpdateBatchDto } from "./dto/update-batch.dto";
 import { BatchListItemDto } from "./dto/batch-list-item.dto";
+import { TransferOwnershipDto } from "./dto/transfer-ownership.dto";
+import { TransportUpdateDto } from "./dto/transport-update.dto";
 import * as crypto from "crypto";
 
 @Injectable()
 export class BatchesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly blockchain: BlockchainService,
+  ) {}
 
   async create(dto: CreateBatchDto, creatorId: number): Promise<Batch> {
     const batchCode = dto.batchCode ?? this.generateBatchCode();
@@ -44,6 +50,49 @@ export class BatchesService {
         owner: {
           connect: { id: creatorId },
         },
+      },
+    });
+  }
+
+  // Public: find batch by code without auth
+  async findByBatchCodePublic(batchCode: string): Promise<Batch | null> {
+    return this.prisma.batch.findUnique({ where: { batchCode } });
+  }
+
+  async addTransportUpdate(batchId: number, user: CurrentUserType, dto: TransportUpdateDto) {
+    const batch = await this.prisma.batch.findUnique({ where: { id: batchId } });
+    if (!batch) throw new NotFoundException("Batch not found");
+
+    // Pack transport info
+    const fromRole = "Transport";
+    const toRole = "Transport";
+    const fromName = dto.location;
+    const toName = `${dto.temperature}°C`;
+
+    // Try record on-chain
+    let txHash: string | null = null;
+    try {
+      if (this.blockchain.isAvailable()) {
+        const { txHash: h } = await this.blockchain.recordBatchTransferTx(batchId, {
+          fromRole,
+          toRole,
+          fromName,
+          toName,
+        });
+        txHash = h;
+      }
+    } catch {
+      txHash = null;
+    }
+
+    return this.prisma.batchOwnershipHistory.create({
+      data: {
+        batchId,
+        fromRole,
+        toRole,
+        fromName,
+        toName,
+        txHash,
       },
     });
   }
@@ -93,8 +142,17 @@ export class BatchesService {
       throw new ForbiddenException("Chỉ chủ lô mới được chỉnh sửa");
     }
 
-    // Kiểm tra xem lô đã được khóa (có hash/IPFS) chưa
-    const isLocked = Boolean(batch.ipfsCid || batch.hashSha256);
+    // Kiểm tra xem lô đã được khóa (có hash/IPFS) hoặc đã anchor on-chain
+    const offchainLocked = Boolean(batch.ipfsCid || batch.hashSha256);
+    let onchainAnchored = false;
+    try {
+      if (this.blockchain.isAvailable()) {
+        onchainAnchored = await this.blockchain.isBatchAnchored(id);
+      }
+    } catch {
+      onchainAnchored = false;
+    }
+    const isLocked = offchainLocked || onchainAnchored;
 
     // Kiểm tra có đơn hàng liên quan không
     const hasOrders = await this.prisma.order.count({
@@ -152,5 +210,67 @@ export class BatchesService {
       now.getUTCMinutes().toString().padStart(2, "0") +
       now.getUTCSeconds().toString().padStart(2, "0");
     return `BATCH-${datePart}${timePart}`;
+  }
+
+  // --- Ownership transfer & history ---
+  async transferOwnership(batchId: number, user: CurrentUserType, dto: TransferOwnershipDto) {
+    const batch = await this.prisma.batch.findUnique({ where: { id: batchId } });
+    if (!batch) throw new NotFoundException("Batch not found");
+
+    // Determine current owner from latest history; default to farmer (creator)
+    const last = await this.prisma.batchOwnershipHistory.findFirst({
+      where: { batchId },
+      orderBy: { createdAt: "desc" },
+    });
+
+    const fromRole = last?.toRole ?? "Farmer";
+    const fromName = last?.toName ?? (user.email ?? `User#${user.id}`);
+
+    // Call blockchain to record transfer if available
+    let txHash: string | null = null;
+    try {
+      if (this.blockchain.isAvailable()) {
+        const { txHash: h } = await this.blockchain.recordBatchTransferTx(batchId, {
+          fromRole,
+          toRole: dto.toRole,
+          fromName,
+          toName: dto.toName,
+        });
+        txHash = h;
+      }
+    } catch (e) {
+      // If on-chain fails, still persist off-chain history without txHash
+      txHash = null;
+    }
+
+    return this.prisma.batchOwnershipHistory.create({
+      data: {
+        batchId,
+        fromRole,
+        fromName,
+        toRole: dto.toRole,
+        toName: dto.toName,
+        txHash,
+      },
+    });
+  }
+
+  async getOwnershipHistory(batchId: number) {
+    const exists = await this.prisma.batch.findUnique({ where: { id: batchId } });
+    if (!exists) throw new NotFoundException("Batch not found");
+    return this.prisma.batchOwnershipHistory.findMany({
+      where: { batchId },
+      orderBy: { createdAt: "asc" },
+    });
+  }
+
+  // Public ownership history (no auth)
+  async getOwnershipHistoryPublic(batchId: number) {
+    const exists = await this.prisma.batch.findUnique({ where: { id: batchId } });
+    if (!exists) throw new NotFoundException("Batch not found");
+    return this.prisma.batchOwnershipHistory.findMany({
+      where: { batchId },
+      orderBy: { createdAt: "asc" },
+    });
   }
 }

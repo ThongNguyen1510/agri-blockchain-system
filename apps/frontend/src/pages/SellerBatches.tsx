@@ -35,6 +35,35 @@ const SellerBatches = () => {
   const [certModalOpen, setCertModalOpen] = useState(false);
   const [selectedBatch, setSelectedBatch] = useState<BatchDto | null>(null);
 
+  // Ownership transfer modal state
+  const [transferOpen, setTransferOpen] = useState(false);
+  const [transferBatch, setTransferBatch] = useState<BatchDto | null>(null);
+  const [toRole, setToRole] = useState("");
+  const [toName, setToName] = useState("");
+
+  const openTransfer = (batch: BatchDto) => {
+    setTransferBatch(batch);
+    setToRole("");
+    setToName("");
+    setTransferOpen(true);
+  };
+
+  const submitTransfer = async () => {
+    if (!token || !transferBatch) return;
+    if (!toRole.trim() || !toName.trim()) {
+      toast.error("Vui lòng nhập đầy đủ thông tin chuyển giao");
+      return;
+    }
+    try {
+      await apiClient.transferBatchOwnership(transferBatch.id, { toRole: toRole.trim(), toName: toName.trim() }, token);
+      toast.success("Đã ghi nhận chuyển giao lô hàng");
+      setTransferOpen(false);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Chuyển giao thất bại";
+      toast.error(msg);
+    }
+  };
+
   const {
     data: batches,
     isLoading,
@@ -330,6 +359,15 @@ const SellerBatches = () => {
                       <Shield className="h-4 w-4" />
                       Thêm chứng nhận
                     </Button>
+                    {/* Chuyển giao quyền sở hữu */}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full gap-2"
+                      onClick={() => openTransfer(batch)}
+                    >
+                      Chuyển giao
+                    </Button>
                   </div>
                 </div>
               </Card>
@@ -348,6 +386,38 @@ const SellerBatches = () => {
           batchId={selectedBatch.id}
           batchCode={selectedBatch.batchCode}
         />
+      )}
+
+      {/* Ownership transfer modal (simple overlay) */}
+      {transferOpen && transferBatch && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <Card className="w-full max-w-md p-6">
+            <h3 className="mb-4 text-lg font-semibold">Chuyển giao lô hàng {transferBatch.batchCode}</h3>
+            <div className="space-y-3">
+              <div>
+                <label className="text-sm text-muted-foreground">Vai trò người nhận</label>
+                <Input
+                  placeholder="Distributor / Shop / Customer"
+                  value={toRole}
+                  onChange={(e) => setToRole(e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="text-sm text-muted-foreground">Tên người nhận/đơn vị</label>
+                <Input
+                  placeholder="Ví dụ: Kho B / Cửa hàng C / Khách D"
+                  value={toName}
+                  onChange={(e) => setToName(e.target.value)}
+                />
+              </div>
+              <div className="flex gap-3 pt-2">
+                <Button className="flex-1" onClick={submitTransfer}>Xác nhận</Button>
+                <Button variant="outline" className="flex-1" onClick={() => setTransferOpen(false)}>Hủy</Button>
+              </div>
+              <p className="text-xs text-muted-foreground">Sau khi chuyển, timeline sẽ cập nhật ở trang Truy xuất.</p>
+            </div>
+          </Card>
+        </div>
       )}
     </div>
   );

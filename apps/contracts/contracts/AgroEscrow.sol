@@ -33,6 +33,7 @@ contract AgroEscrow is Ownable {
     event OrderReleased(uint256 indexed orderId);
     event OrderRefunded(uint256 indexed orderId);
     event BatchHashAnchored(uint256 indexed batchId, bytes32 indexed hash, address indexed creator);
+    event BatchTransferred(uint256 indexed batchId, string fromRole, string toRole, string fromName, string toName);
 
     constructor(address initialOwner) Ownable(initialOwner) {
         require(initialOwner != address(0), "Owner required");
@@ -106,5 +107,17 @@ contract AgroEscrow is Ownable {
 
     function isBatchAnchored(uint256 batchId) external view returns (bool) {
         return _batches[batchId].hash != bytes32(0);
+    }
+
+    // Record a batch transfer event on-chain for auditability (demo purpose)
+    function recordBatchTransfer(
+        uint256 batchId,
+        string calldata fromRole,
+        string calldata toRole,
+        string calldata fromName,
+        string calldata toName
+    ) external {
+        require(batchId != 0, "Invalid batchId");
+        emit BatchTransferred(batchId, fromRole, toRole, fromName, toName);
     }
 }

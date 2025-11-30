@@ -40,8 +40,13 @@ export class DashboardService {
       take: 60,
     });
 
-    // Tính tổng released bằng bigint ở Node để tránh overflow trong DB
-    const releasedTotalWei: bigint = releasedAmounts.reduce((acc, o) => acc + (o.totalWei ?? 0n), 0n);
+    // Tính tổng released bằng Decimal để phù hợp với schema mới
+    const releasedTotalWei: Prisma.Decimal = releasedAmounts.reduce<Prisma.Decimal>((acc, o) => {
+      const val = o.totalWei !== null && o.totalWei !== undefined
+        ? new Prisma.Decimal(o.totalWei.toString())
+        : new Prisma.Decimal(0);
+      return acc.add(val);
+    }, new Prisma.Decimal(0));
 
     const stats = {
       totalOrders,
@@ -76,7 +81,7 @@ export class DashboardService {
     return {};
   }
 
-  private buildSalesSeries(orders: Array<{ createdAt: Date; totalWei: bigint }>) {
+  private buildSalesSeries(orders: Array<{ createdAt: Date; totalWei: Prisma.Decimal | bigint | number }>) {
     const revenueByMonth = new Map<string, number>();
     for (const order of orders) {
       const monthKey = this.getMonthKey(order.createdAt);
@@ -94,12 +99,13 @@ export class DashboardService {
     }));
   }
 
-  private toEthNumber(wei?: bigint | null): number {
+  private toEthNumber(wei?: Prisma.Decimal | bigint | number | null): number {
     if (!wei) return 0;
-    return Number(wei) / 1e18;
+    const dec = wei instanceof Prisma.Decimal ? wei : new Prisma.Decimal(wei.toString());
+    return Number(dec.div(new Prisma.Decimal(1e18)).toString());
   }
 
-  private toEthString(wei?: bigint | null): string {
+  private toEthString(wei?: Prisma.Decimal | bigint | number | null): string {
     return this.toEthNumber(wei).toFixed(4);
   }
 

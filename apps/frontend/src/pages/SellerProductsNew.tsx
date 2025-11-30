@@ -132,6 +132,19 @@ const SellerProductsNew = () => {
       return;
     }
     
+    // Validate coverImageUrl length and block data URLs
+    if (formData.coverImageUrl) {
+      const url = formData.coverImageUrl.trim();
+      if (url.startsWith("data:")) {
+        toast.error("Không hỗ trợ dán ảnh dạng data URL. Vui lòng dùng nút chọn file để tải ảnh lên.");
+        return;
+      }
+      if (url.length > 255) {
+        toast.error("Đường dẫn ảnh quá dài (>{255}). Hãy tải ảnh lên để nhận URL ngắn hơn.");
+        return;
+      }
+    }
+
     setIsSubmitting(true);
     try {
       const productData = {
@@ -350,6 +363,7 @@ const SellerProductsNew = () => {
                 <Input
                   id="coverImageUrl"
                   type="url"
+                  maxLength={255}
                   placeholder="https://example.com/image.jpg"
                   value={formData.coverImageUrl}
                   onChange={(e) => handleInputChange("coverImageUrl", e.target.value)}
