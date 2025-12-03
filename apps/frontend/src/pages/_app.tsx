@@ -12,6 +12,8 @@ import { getDefaultConfig, RainbowKitProvider } from '@rainbow-me/rainbowkit';
 import { WagmiProvider } from 'wagmi';
 import { hardhat } from 'wagmi/chains'; // Mạng Hardhat local
 import { QueryClientProvider, QueryClient } from '@tanstack/react-query';
+import ErrorBoundary from '../components/ui/ErrorBoundary';
+import ToastProvider from '../components/ui/ToastProvider';
 
 // Cấu hình wagmi và RainbowKit
 const config = getDefaultConfig({
@@ -26,17 +28,20 @@ const queryClient = new QueryClient();
 
 function MyApp({ Component, pageProps }: AppProps) {
   return (
-    // Bọc toàn bộ ứng dụng trong các Provider
-    <WagmiProvider config={config}>
-      <QueryClientProvider client={queryClient}>
-        <RainbowKitProvider>
-          <ThemeProvider theme={theme}>
-            <CssBaseline />
-            <Component {...pageProps} />
-          </ThemeProvider>
-        </RainbowKitProvider>
-      </QueryClientProvider>
-    </WagmiProvider>
+    <ErrorBoundary>
+      {/* Bọc toàn bộ ứng dụng trong các Provider */}
+      <WagmiProvider config={config}>
+        <QueryClientProvider client={queryClient}>
+          <RainbowKitProvider>
+            <ThemeProvider theme={theme}>
+              <CssBaseline />
+              <ToastProvider />
+              <Component {...pageProps} />
+            </ThemeProvider>
+          </RainbowKitProvider>
+        </QueryClientProvider>
+      </WagmiProvider>
+    </ErrorBoundary>
   );
 }
 

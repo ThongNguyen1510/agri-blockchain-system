@@ -17,6 +17,7 @@ const sellerMenu: MenuItem[] = [
   { text: 'Dashboard', icon: <Dashboard />, path: '/dashboard' },
   { text: 'Quản lý Lô hàng', icon: <Store />, path: '/batches' },
   { text: 'Quản lý Sản phẩm', icon: <ShoppingCart />, path: '/products' },
+  { text: 'Quản lý Đơn hàng', icon: <ShoppingCart />, path: '/orders' },
 ];
 
 const buyerMenu: MenuItem[] = [
