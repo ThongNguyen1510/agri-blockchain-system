@@ -7,6 +7,7 @@ import { Loader2, Wallet, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { createOrderOnChain } from "@/lib/blockchain";
 import { apiClient } from "@/lib/api-client";
+import { useAuth } from "@/context/AuthContext";
 import { formatWeiToEth } from "@/lib/utils";
 
 interface CheckoutModalProps {
@@ -23,6 +24,7 @@ interface CheckoutModalProps {
 }
 
 export function CheckoutModal({ open, onOpenChange, product, quantity, onSuccess }: CheckoutModalProps) {
+  const { token } = useAuth();
   const [step, setStep] = useState<"input" | "blockchain" | "backend" | "success">("input");
   const [shippingAddress, setShippingAddress] = useState("");
   const [blockchainOrderId, setBlockchainOrderId] = useState<number | null>(null);
@@ -61,7 +63,6 @@ export function CheckoutModal({ open, onOpenChange, product, quantity, onSuccess
       setStep("backend");
       toast.info("Đang lưu thông tin đơn hàng...");
 
-      const token = localStorage.getItem("token");
       if (!token) {
         throw new Error("Chưa đăng nhập");
       }

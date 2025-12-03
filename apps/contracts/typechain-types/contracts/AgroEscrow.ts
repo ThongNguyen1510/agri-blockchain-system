@@ -71,6 +71,7 @@ export interface AgroEscrowInterface extends Interface {
       | "isBatchAnchored"
       | "nextOrderId"
       | "owner"
+      | "recordBatchTransfer"
       | "refundOrder"
       | "releaseOrder"
       | "renounceOwnership"
@@ -80,6 +81,7 @@ export interface AgroEscrowInterface extends Interface {
   getEvent(
     nameOrSignatureOrTopic:
       | "BatchHashAnchored"
+      | "BatchTransferred"
       | "OrderCreated"
       | "OrderRefunded"
       | "OrderReleased"
@@ -111,6 +113,10 @@ export interface AgroEscrowInterface extends Interface {
     values?: undefined
   ): string;
   encodeFunctionData(functionFragment: "owner", values?: undefined): string;
+  encodeFunctionData(
+    functionFragment: "recordBatchTransfer",
+    values: [BigNumberish, string, string, string, string]
+  ): string;
   encodeFunctionData(
     functionFragment: "refundOrder",
     values: [BigNumberish]
@@ -148,6 +154,10 @@ export interface AgroEscrowInterface extends Interface {
   ): Result;
   decodeFunctionResult(functionFragment: "owner", data: BytesLike): Result;
   decodeFunctionResult(
+    functionFragment: "recordBatchTransfer",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
     functionFragment: "refundOrder",
     data: BytesLike
   ): Result;
@@ -176,6 +186,34 @@ export namespace BatchHashAnchoredEvent {
     batchId: bigint;
     hash: string;
     creator: string;
+  }
+  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
+  export type Filter = TypedDeferredTopicFilter<Event>;
+  export type Log = TypedEventLog<Event>;
+  export type LogDescription = TypedLogDescription<Event>;
+}
+
+export namespace BatchTransferredEvent {
+  export type InputTuple = [
+    batchId: BigNumberish,
+    fromRole: string,
+    toRole: string,
+    fromName: string,
+    toName: string
+  ];
+  export type OutputTuple = [
+    batchId: bigint,
+    fromRole: string,
+    toRole: string,
+    fromName: string,
+    toName: string
+  ];
+  export interface OutputObject {
+    batchId: bigint;
+    fromRole: string;
+    toRole: string;
+    fromName: string;
+    toName: string;
   }
   export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
   export type Filter = TypedDeferredTopicFilter<Event>;
@@ -325,6 +363,18 @@ export interface AgroEscrow extends BaseContract {
 
   owner: TypedContractMethod<[], [string], "view">;
 
+  recordBatchTransfer: TypedContractMethod<
+    [
+      batchId: BigNumberish,
+      fromRole: string,
+      toRole: string,
+      fromName: string,
+      toName: string
+    ],
+    [void],
+    "nonpayable"
+  >;
+
   refundOrder: TypedContractMethod<
     [orderId: BigNumberish],
     [void],
@@ -387,6 +437,19 @@ export interface AgroEscrow extends BaseContract {
     nameOrSignature: "owner"
   ): TypedContractMethod<[], [string], "view">;
   getFunction(
+    nameOrSignature: "recordBatchTransfer"
+  ): TypedContractMethod<
+    [
+      batchId: BigNumberish,
+      fromRole: string,
+      toRole: string,
+      fromName: string,
+      toName: string
+    ],
+    [void],
+    "nonpayable"
+  >;
+  getFunction(
     nameOrSignature: "refundOrder"
   ): TypedContractMethod<[orderId: BigNumberish], [void], "nonpayable">;
   getFunction(
@@ -405,6 +468,13 @@ export interface AgroEscrow extends BaseContract {
     BatchHashAnchoredEvent.InputTuple,
     BatchHashAnchoredEvent.OutputTuple,
     BatchHashAnchoredEvent.OutputObject
+  >;
+  getEvent(
+    key: "BatchTransferred"
+  ): TypedContractEvent<
+    BatchTransferredEvent.InputTuple,
+    BatchTransferredEvent.OutputTuple,
+    BatchTransferredEvent.OutputObject
   >;
   getEvent(
     key: "OrderCreated"
@@ -445,6 +515,17 @@ export interface AgroEscrow extends BaseContract {
       BatchHashAnchoredEvent.InputTuple,
       BatchHashAnchoredEvent.OutputTuple,
       BatchHashAnchoredEvent.OutputObject
+    >;
+
+    "BatchTransferred(uint256,string,string,string,string)": TypedContractEvent<
+      BatchTransferredEvent.InputTuple,
+      BatchTransferredEvent.OutputTuple,
+      BatchTransferredEvent.OutputObject
+    >;
+    BatchTransferred: TypedContractEvent<
+      BatchTransferredEvent.InputTuple,
+      BatchTransferredEvent.OutputTuple,
+      BatchTransferredEvent.OutputObject
     >;
 
     "OrderCreated(uint256,address,address,bytes32,uint256)": TypedContractEvent<

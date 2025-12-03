@@ -14,6 +14,7 @@ import { BatchListItemDto } from "./dto/batch-list-item.dto";
 import { TransferOwnershipDto } from "./dto/transfer-ownership.dto";
 import { TransportUpdateDto } from "./dto/transport-update.dto";
 import { Public } from "../auth/decorators/public.decorator";
+import { QcOkDto } from "./dto/qc-ok.dto";
 
 @ApiTags("batches")
 @ApiBearerAuth()
@@ -149,6 +150,16 @@ export class BatchesController {
     @Body() dto: TransportUpdateDto,
   ) {
     return this.batchesService.addTransportUpdate(id, user, dto);
+  }
+
+  // ---- QC OK (auto transfer via on-chain, using recordBatchTransfer) ----
+  @Post(":id/qc-ok")
+  async qcOk(
+    @CurrentUser() user: CurrentUserType,
+    @Param("id", ParseIntPipe) id: number,
+    @Body() dto: QcOkDto,
+  ) {
+    return this.batchesService.qcOkAndTransfer(id, user, dto);
   }
 
   // ---- Public Trace endpoints (no auth) ----

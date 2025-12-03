@@ -63,6 +63,43 @@
       {
         "indexed": true,
         "internalType": "uint256",
+        "name": "batchId",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "string",
+        "name": "fromRole",
+        "type": "string"
+      },
+      {
+        "indexed": false,
+        "internalType": "string",
+        "name": "toRole",
+        "type": "string"
+      },
+      {
+        "indexed": false,
+        "internalType": "string",
+        "name": "fromName",
+        "type": "string"
+      },
+      {
+        "indexed": false,
+        "internalType": "string",
+        "name": "toName",
+        "type": "string"
+      }
+    ],
+    "name": "BatchTransferred",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "uint256",
         "name": "orderId",
         "type": "uint256"
       },
@@ -311,6 +348,39 @@
       }
     ],
     "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "batchId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "string",
+        "name": "fromRole",
+        "type": "string"
+      },
+      {
+        "internalType": "string",
+        "name": "toRole",
+        "type": "string"
+      },
+      {
+        "internalType": "string",
+        "name": "fromName",
+        "type": "string"
+      },
+      {
+        "internalType": "string",
+        "name": "toName",
+        "type": "string"
+      }
+    ],
+    "name": "recordBatchTransfer",
+    "outputs": [],
+    "stateMutability": "nonpayable",
     "type": "function"
   },
   {

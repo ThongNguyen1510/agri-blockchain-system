@@ -9,6 +9,7 @@ import { UpdateBatchDto } from "./dto/update-batch.dto";
 import { BatchListItemDto } from "./dto/batch-list-item.dto";
 import { TransferOwnershipDto } from "./dto/transfer-ownership.dto";
 import { TransportUpdateDto } from "./dto/transport-update.dto";
+import { QcOkDto } from "./dto/qc-ok.dto";
 import * as crypto from "crypto";
 
 @Injectable()
@@ -50,6 +51,40 @@ export class BatchesService {
         owner: {
           connect: { id: creatorId },
         },
+      },
+    });
+  }
+
+  async qcOkAndTransfer(batchId: number, user: CurrentUserType, dto: QcOkDto) {
+    const batch = await this.prisma.batch.findUnique({ where: { id: batchId } });
+    if (!batch) throw new NotFoundException("Batch not found");
+
+    const fromRole = "QC";
+    const fromName = dto.inspector;
+
+    let txHash: string | null = null;
+    try {
+      if (this.blockchain.isAvailable()) {
+        const { txHash: h } = await this.blockchain.recordBatchTransferTx(batchId, {
+          fromRole,
+          toRole: dto.toRole,
+          fromName,
+          toName: dto.toName,
+        });
+        txHash = h;
+      }
+    } catch {
+      txHash = null;
+    }
+
+    return this.prisma.batchOwnershipHistory.create({
+      data: {
+        batchId,
+        fromRole,
+        fromName,
+        toRole: dto.toRole,
+        toName: dto.toName,
+        txHash,
       },
     });
   }

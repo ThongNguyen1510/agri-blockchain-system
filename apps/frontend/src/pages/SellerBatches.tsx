@@ -40,12 +40,42 @@ const SellerBatches = () => {
   const [transferBatch, setTransferBatch] = useState<BatchDto | null>(null);
   const [toRole, setToRole] = useState("");
   const [toName, setToName] = useState("");
+  // QC OK modal state
+  const [qcOpen, setQcOpen] = useState(false);
+  const [qcBatch, setQcBatch] = useState<BatchDto | null>(null);
+  const [qcToRole, setQcToRole] = useState("");
+  const [qcToName, setQcToName] = useState("");
+  const [qcInspector, setQcInspector] = useState("");
 
   const openTransfer = (batch: BatchDto) => {
     setTransferBatch(batch);
     setToRole("");
     setToName("");
     setTransferOpen(true);
+  };
+
+  const openQc = (batch: BatchDto) => {
+    setQcBatch(batch);
+    setQcToRole("");
+    setQcToName("");
+    setQcInspector("");
+    setQcOpen(true);
+  };
+
+  const submitQcOk = async () => {
+    if (!token || !qcBatch) return;
+    if (!qcToRole.trim() || !qcToName.trim() || !qcInspector.trim()) {
+      toast.error("Vui lòng nhập đủ toRole, toName, inspector");
+      return;
+    }
+    try {
+      await apiClient.qcOk(qcBatch.id, { toRole: qcToRole.trim(), toName: qcToName.trim(), inspector: qcInspector.trim() }, token);
+      toast.success("Đã ghi QC OK và chuyển giao on-chain");
+      setQcOpen(false);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "QC OK thất bại";
+      toast.error(msg);
+    }
   };
 
   const submitTransfer = async () => {
@@ -264,6 +294,34 @@ const SellerBatches = () => {
                 </Button>
               </Link>
             )}
+
+      {/* QC OK modal */}
+      {qcOpen && qcBatch && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <Card className="w-full max-w-md p-6">
+            <h3 className="mb-4 text-lg font-semibold">QC OK lô {qcBatch.batchCode}</h3>
+            <div className="space-y-3">
+              <div>
+                <label className="text-sm text-muted-foreground">Vai trò nơi nhận</label>
+                <Input placeholder="Warehouse / Distributor / Shop" value={qcToRole} onChange={(e) => setQcToRole(e.target.value)} />
+              </div>
+              <div>
+                <label className="text-sm text-muted-foreground">Tên nơi nhận</label>
+                <Input placeholder="Kho BD / Cửa hàng Q1" value={qcToName} onChange={(e) => setQcToName(e.target.value)} />
+              </div>
+              <div>
+                <label className="text-sm text-muted-foreground">Tên kiểm định (inspector)</label>
+                <Input placeholder="QC Team A" value={qcInspector} onChange={(e) => setQcInspector(e.target.value)} />
+              </div>
+              <div className="flex gap-3 pt-2">
+                <Button className="flex-1" onClick={submitQcOk}>Xác nhận</Button>
+                <Button variant="outline" className="flex-1" onClick={() => setQcOpen(false)}>Hủy</Button>
+              </div>
+              <p className="text-xs text-muted-foreground">Sau khi QC OK, timeline sẽ có bước "QC → nơi nhận" kèm txHash.</p>
+            </div>
+          </Card>
+        </div>
+      )}
           </Card>
         ) : (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -358,6 +416,15 @@ const SellerBatches = () => {
                     >
                       <Shield className="h-4 w-4" />
                       Thêm chứng nhận
+                    </Button>
+                    {/* QC OK automation */}
+                    <Button
+                      variant="default"
+                      size="sm"
+                      className="w-full gap-2 bg-emerald-600 hover:bg-emerald-700"
+                      onClick={() => openQc(batch)}
+                    >
+                      QC OK → Chuyển giao
                     </Button>
                     {/* Chuyển giao quyền sở hữu */}
                     <Button

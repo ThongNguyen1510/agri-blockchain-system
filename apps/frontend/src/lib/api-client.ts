@@ -125,6 +125,15 @@ export const apiClient = {
     return apiRequest<OwnershipHistoryDto[]>(`/batches/public/by-code/${encodeURIComponent(batchCode)}/ownership-history`);
   },
 
+  // QC OK automation (using recordBatchTransfer under the hood)
+  qcOk(batchId: number, body: { toRole: string; toName: string; inspector: string }, token: string) {
+    return apiRequest<OwnershipHistoryDto>(`/batches/${batchId}/qc-ok`, {
+      method: "POST",
+      token,
+      body: JSON.stringify(body),
+    });
+  },
+
   register(email: string, password: string, role: string, walletAddress: string) {
     return apiRequest<AuthResponseDto>("/auth/register", {
       method: "POST",

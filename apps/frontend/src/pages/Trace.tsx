@@ -36,6 +36,13 @@ const Trace = () => {
   const [transportLoading, setTransportLoading] = useState(false);
   const isBuyer = (user?.role ?? "").toLowerCase() === "buyer";
 
+  // QC OK modal state
+  const [qcOpen, setQcOpen] = useState(false);
+  const [qcToRole, setQcToRole] = useState("");
+  const [qcToName, setQcToName] = useState("");
+  const [qcInspector, setQcInspector] = useState("");
+  const [qcLoading, setQcLoading] = useState(false);
+
   // Top-level ownership history query (auth path)
   const { data: ownershipHistoryPrivate } = useQuery<OwnershipHistoryDto[]>({
     queryKey: ["ownership-history", selectedBatch?.id, token],
@@ -190,6 +197,33 @@ const Trace = () => {
       toast.error(msg);
     } finally {
       setTransportLoading(false);
+    }
+  };
+
+  const handleQcOk = async () => {
+    if (!selectedBatch || !token) return;
+    if (!qcToRole.trim() || !qcToName.trim() || !qcInspector.trim()) {
+      toast.error("Nhập đủ vai trò nơi nhận, tên nơi nhận và inspector");
+      return;
+    }
+    try {
+      setQcLoading(true);
+      await apiClient.qcOk(
+        selectedBatch.id,
+        { toRole: qcToRole.trim(), toName: qcToName.trim(), inspector: qcInspector.trim() },
+        token,
+      );
+      toast.success("Đã ghi QC OK và chuyển giao on-chain");
+      setQcOpen(false);
+      setQcToRole("");
+      setQcToName("");
+      setQcInspector("");
+      await queryClient.invalidateQueries({ queryKey: ["ownership-history", selectedBatch.id] });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Không thể ghi QC OK";
+      toast.error(msg);
+    } finally {
+      setQcLoading(false);
     }
   };
 
@@ -491,8 +525,15 @@ const Trace = () => {
         {/* Ownership timeline */}
         {selectedBatch && (
           <Card className="space-y-4 p-6">
-            <div className="flex items-center gap-2">
-              <h3 className="text-xl font-semibold">Hành trình lô hàng</h3>
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <h3 className="text-xl font-semibold">Hành trình lô hàng</h3>
+              </div>
+              {!publicMode && !isBuyer && token && (
+                <Button variant="default" size="sm" className="gap-2" onClick={() => setQcOpen(true)}>
+                  QC OK → Chuyển giao
+                </Button>
+              )}
             </div>
             {ownershipHistory && ownershipHistory.length > 0 ? (
               <ol className="relative ml-2 border-l pl-4">
@@ -578,6 +619,33 @@ const Trace = () => {
           </Card>
 
           {renderResult()}
+      {/* QC OK modal */}
+      {qcOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <Card className="w-full max-w-md p-6">
+            <h3 className="mb-4 text-lg font-semibold">QC OK lô {selectedBatch?.batchCode}</h3>
+            <div className="space-y-3">
+              <div>
+                <label className="text-sm text-muted-foreground">Vai trò nơi nhận</label>
+                <Input placeholder="Warehouse / Distributor / Shop" value={qcToRole} onChange={(e) => setQcToRole(e.target.value)} />
+              </div>
+              <div>
+                <label className="text-sm text-muted-foreground">Tên nơi nhận</label>
+                <Input placeholder="Kho BD / Cửa hàng Q1" value={qcToName} onChange={(e) => setQcToName(e.target.value)} />
+              </div>
+              <div>
+                <label className="text-sm text-muted-foreground">Tên kiểm định (inspector)</label>
+                <Input placeholder="QC Team A" value={qcInspector} onChange={(e) => setQcInspector(e.target.value)} />
+              </div>
+              <div className="flex gap-3 pt-2">
+                <Button className="flex-1" onClick={handleQcOk} disabled={qcLoading}>{qcLoading ? "Đang ghi..." : "Xác nhận"}</Button>
+                <Button variant="outline" className="flex-1" onClick={() => setQcOpen(false)}>Hủy</Button>
+              </div>
+              <p className="text-xs text-muted-foreground">Sau khi QC OK, timeline sẽ có bước "QC → nơi nhận" kèm txHash.</p>
+            </div>
+          </Card>
+        </div>
+      )}
         </div>
       </div>
 
