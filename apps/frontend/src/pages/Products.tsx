@@ -13,7 +13,8 @@ import { useAuth } from "@/context/AuthContext";
 import type { ProductDto } from "@/types/api";
 
 const getCategory = (product: ProductDto) => product.batch?.variety ?? "Khác";
-const getSellerName = (product: ProductDto) => product.seller?.email ?? "Chưa rõ người bán";
+const getSellerName = (product: ProductDto) =>
+  product.seller?.displayName || product.seller?.email || "Chưa rõ người bán";
 
 const Products = () => {
   const { token } = useAuth();

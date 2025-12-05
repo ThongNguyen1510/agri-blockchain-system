@@ -34,6 +34,9 @@ const Login = () => {
   const [regConfirmPassword, setRegConfirmPassword] = useState("");
   const [regRole, setRegRole] = useState<UserRole>("Buyer");
   const [regWalletAddress, setRegWalletAddress] = useState("");
+  const [regDisplayName, setRegDisplayName] = useState("");
+  const [regPhone, setRegPhone] = useState("");
+  const [regAddress, setRegAddress] = useState("");
   const [isRegistering, setIsRegistering] = useState(false);
 
   useEffect(() => {
@@ -78,6 +81,11 @@ const Login = () => {
       return;
     }
 
+    if (!regDisplayName.trim()) {
+      toast.error("Vui lòng nhập Tên hiển thị");
+      return;
+    }
+
     if (!regWalletAddress.trim()) {
       toast.error("Vui lòng nhập địa chỉ ví hoặc kết nối ví blockchain");
       return;
@@ -85,7 +93,15 @@ const Login = () => {
 
     setIsRegistering(true);
     try {
-      await register(regEmail.trim(), regPassword, regRole, regWalletAddress.trim());
+      await register(
+        regEmail.trim(),
+        regPassword,
+        regRole,
+        regWalletAddress.trim(),
+        regDisplayName.trim(),
+        regPhone.trim() || undefined,
+        regAddress.trim() || undefined,
+      );
       toast.success("Đăng ký thành công");
       navigate(from, { replace: true });
     } catch (error) {
@@ -166,7 +182,7 @@ const Login = () => {
                     <p>Kết nối ví blockchain trước khi đăng ký để tự động điền địa chỉ ví vào form này.</p>
                   </div>
                 )}
-                <form className="space-y-6" onSubmit={handleRegisterSubmit}>
+                <form className="space-y-8" onSubmit={handleRegisterSubmit}>
                   <div className="space-y-2">
                     <label htmlFor="reg-email" className="text-sm font-medium text-muted-foreground">
                       Email
@@ -181,6 +197,8 @@ const Login = () => {
                       onChange={(event) => setRegEmail(event.target.value)}
                     />
                   </div>
+
+                  {/* Step 1 end */}
 
                   <div className="space-y-2">
                     <label htmlFor="reg-password" className="text-sm font-medium text-muted-foreground">
@@ -225,6 +243,47 @@ const Login = () => {
                         <SelectItem value="Seller">Người bán (Seller)</SelectItem>
                       </SelectContent>
                     </Select>
+                  </div>
+
+                  {/* Step 2: Chi tiết & Blockchain */}
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-2 md:col-span-2">
+                      <label htmlFor="reg-display-name" className="text-sm font-medium text-muted-foreground">
+                        Tên hiển thị
+                      </label>
+                      <Input
+                        id="reg-display-name"
+                        type="text"
+                        required
+                        placeholder="Nông Trại Xanh / Trần Văn A"
+                        value={regDisplayName}
+                        onChange={(e) => setRegDisplayName(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label htmlFor="reg-phone" className="text-sm font-medium text-muted-foreground">
+                        Số điện thoại (tuỳ chọn)
+                      </label>
+                      <Input
+                        id="reg-phone"
+                        type="text"
+                        placeholder="0901xxxxxx"
+                        value={regPhone}
+                        onChange={(e) => setRegPhone(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label htmlFor="reg-address" className="text-sm font-medium text-muted-foreground">
+                        Địa chỉ (tuỳ chọn)
+                      </label>
+                      <Input
+                        id="reg-address"
+                        type="text"
+                        placeholder="123 đường ABC, Quận XYZ"
+                        value={regAddress}
+                        onChange={(e) => setRegAddress(e.target.value)}
+                      />
+                    </div>
                   </div>
 
                   <div className="space-y-2">

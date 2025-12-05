@@ -9,6 +9,7 @@ import { CreateProductDto } from "./dto/create-product.dto";
 import { ProductDto } from "./dto/product.dto";
 import { ProductsService } from "./products.service";
 import { UpdateProductDto } from "./dto/update-product.dto";
+import { AddProductImagesDto } from "./dto/add-product-images.dto";
 
 @ApiTags("products")
 @ApiBearerAuth()
@@ -50,6 +51,28 @@ export class ProductsController {
     @Body() dto: UpdateProductDto,
   ): Promise<ProductDto> {
     const product = await this.productsService.update(id, user.id, dto);
+    return ProductDto.fromEntity(product);
+  }
+
+  @Roles(UserRole.Seller)
+  @Post(":id/images")
+  async addImages(
+    @CurrentUser() user: CurrentUserType,
+    @Param("id", ParseIntPipe) id: number,
+    @Body() dto: AddProductImagesDto,
+  ): Promise<ProductDto> {
+    const product = await this.productsService.addImages(id, user.id, dto.urls, dto.sortOrders);
+    return ProductDto.fromEntity(product);
+  }
+
+  @Roles(UserRole.Seller)
+  @Delete(":id/images/:imageId")
+  async deleteImage(
+    @CurrentUser() user: CurrentUserType,
+    @Param("id", ParseIntPipe) id: number,
+    @Param("imageId", ParseIntPipe) imageId: number,
+  ): Promise<ProductDto> {
+    const product = await this.productsService.deleteImage(id, imageId, user.id);
     return ProductDto.fromEntity(product);
   }
 

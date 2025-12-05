@@ -218,15 +218,13 @@ export class BlockchainService {
       ipfsCid?: string;
     }
   ): Promise<{ anchored: boolean; verified: boolean; onChainHash?: string }> {
-    const anchored = await this.isBatchAnchored(batchId);
-    
-    if (!anchored) {
-      return { anchored: false, verified: false };
-    }
-
+    // Không dùng isBatchAnchored nữa vì contract hiện tại không implement đúng ABI,
+    // thay vào đó dựa trực tiếp trên getBatch.
     const onChainBatch = await this.getBatch(batchId);
+
+    // Nếu không lấy được batch từ chain => coi như chưa anchor
     if (!onChainBatch) {
-      return { anchored: true, verified: false };
+      return { anchored: false, verified: false };
     }
 
     const computedHash = this.createBatchHash(batchData);

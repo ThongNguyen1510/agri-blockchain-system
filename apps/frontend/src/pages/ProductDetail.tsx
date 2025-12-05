@@ -23,6 +23,7 @@ const ProductDetail = () => {
 
   const productId = Number(id);
   const [quantity, setQuantity] = useState(1);
+  const [activeImage, setActiveImage] = useState(0);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
 
   const {
@@ -42,6 +43,22 @@ const ProductDetail = () => {
     queryClient.invalidateQueries({ queryKey: ["product", productId] });
     queryClient.invalidateQueries({ queryKey: ["products"] });
   };
+
+  // Build gallery and current image at top-level to avoid using hooks inside render
+  const gallery: string[] = useMemo(() => {
+    if (!product) return ["/placeholder.svg"];
+    const urls: string[] = [];
+    if (product.coverImageUrl) urls.push(product.coverImageUrl);
+    if (Array.isArray((product as any).images)) {
+      for (const img of (product as any).images as Array<{ url?: string }>) {
+        if (img?.url && !urls.includes(img.url)) urls.push(img.url);
+      }
+    }
+    if (urls.length === 0) urls.push("/placeholder.svg");
+    return urls;
+  }, [product?.coverImageUrl, (product as any)?.images]);
+
+  const image = gallery[Math.min(activeImage, Math.max(gallery.length - 1, 0))] ?? "/placeholder.svg";
 
   const totalEth = useMemo(() => {
     if (!product) {
@@ -100,8 +117,7 @@ const ProductDetail = () => {
       );
     }
 
-    const image = product.coverImageUrl ?? "/placeholder.svg";
-    const sellerName = product.seller?.email ?? "Chưa cập nhật người bán";
+    const sellerName = product.seller?.displayName || product.seller?.email || "Chưa cập nhật người bán";
     const sellerWallet = product.seller?.walletAddress ?? "Chưa có ví";
     const batchCode = product.batch?.batchCode ?? `#${product.batchId}`;
     const variety = product.batch?.variety ?? "Khác";
@@ -129,10 +145,27 @@ const ProductDetail = () => {
               </Badge>
             </div>
           </div>
+          {gallery.length > 1 && (
+            <div className="flex gap-3 overflow-x-auto pb-1">
+              {gallery.map((url, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => setActiveImage(idx)}
+                  className={`h-20 w-20 shrink-0 overflow-hidden rounded-lg border ${
+                    activeImage === idx ? "border-primary ring-2 ring-primary/40" : "border-border"
+                  }`}
+                  title={`Ảnh ${idx + 1}`}
+                >
+                  <img src={url} alt={`thumb-${idx}`} className="h-full w-full object-cover" />
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="space-y-6">
-          <div>
+          <div className="space-y-3">
             <div className="mb-2 flex items-start justify-between">
               <h1 className="text-4xl font-bold">{product.name}</h1>
               <Badge variant="outline" className="border-primary/20 text-primary">
@@ -143,8 +176,33 @@ const ProductDetail = () => {
               <MapPin className="h-4 w-4" />
               {farmName}
             </p>
-            <p className="mt-1 font-mono text-sm text-muted-foreground">{sellerName}</p>
-            <p className="font-mono text-xs text-muted-foreground">{sellerWallet}</p>
+
+            {/* Seller info card */}
+            {product.seller && (
+              <div className="mt-3 flex items-start gap-3 rounded-lg border bg-muted/40 p-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary font-semibold">
+                  {sellerName.charAt(0)?.toUpperCase?.() ?? "S"}
+                </div>
+                <div className="space-y-1 text-sm">
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold">{sellerName}</span>
+                    <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs text-emerald-700">
+                      Nhà cung cấp
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground break-all">{product.seller.email}</p>
+                  {product.seller.phone && (
+                    <p className="text-xs text-muted-foreground">☎ {product.seller.phone}</p>
+                  )}
+                  {product.seller.address && (
+                    <p className="text-xs text-muted-foreground">📍 {product.seller.address}</p>
+                  )}
+                  <p className="text-xs font-mono text-muted-foreground">
+                    Ví: {sellerWallet}
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="flex items-baseline gap-2">

@@ -39,6 +39,8 @@ const SellerProductsNew = () => {
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [galleryUploading, setGalleryUploading] = useState(false);
+  const [galleryUrls, setGalleryUrls] = useState<string[]>([]);
 
   // Get available batches for the current seller
   const {
@@ -60,6 +62,34 @@ const SellerProductsNew = () => {
       ...prev,
       [field]: value,
     }));
+  };
+
+  const handleGalleryFilesChange = async (files?: FileList | null) => {
+    if (!files || files.length === 0) return;
+    if (!token) {
+      toast.error("Vui lòng đăng nhập để tải ảnh");
+      return;
+    }
+    const toUpload = Array.from(files).filter(f => f.type.startsWith("image/"));
+    if (toUpload.length === 0) {
+      toast.error("Vui lòng chọn tệp hình ảnh");
+      return;
+    }
+    try {
+      setGalleryUploading(true);
+      const uploaded: string[] = [];
+      for (const f of toUpload) {
+        const { url } = await apiClient.uploadImage(f, token);
+        uploaded.push(url);
+      }
+      setGalleryUrls(prev => [...prev, ...uploaded]);
+      toast.success(`Đã tải ${uploaded.length} ảnh lên`);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Tải ảnh thất bại";
+      toast.error(msg);
+    } finally {
+      setGalleryUploading(false);
+    }
   };
 
   const handleFileChange = async (file?: File) => {
@@ -153,10 +183,20 @@ const SellerProductsNew = () => {
         priceWei: formData.priceWei,
         stock: parseInt(formData.stock),
         batchId: parseInt(formData.batchId),
-        coverImageUrl: formData.coverImageUrl.trim() || undefined,
+        coverImageUrl: (formData.coverImageUrl || "").trim() || (galleryUrls[0] ?? undefined),
       };
       
-      await apiClient.createProduct(productData, token);
+      const created = await apiClient.createProduct(productData, token);
+      
+      // Attach gallery images if any
+      if (galleryUrls.length > 0) {
+        try {
+          await apiClient.addProductImages(created.id, galleryUrls, undefined, token);
+        } catch (err) {
+          console.error("Failed to attach product images", err);
+          toast.error("Đã tạo sản phẩm nhưng thêm ảnh phụ thất bại. Bạn có thể thêm sau trong trang chỉnh sửa.");
+        }
+      }
       
       toast.success("Sản phẩm đã được tạo thành công!");
       navigate("/seller/products");
@@ -369,6 +409,20 @@ const SellerProductsNew = () => {
                   onChange={(e) => handleInputChange("coverImageUrl", e.target.value)}
                 />
                 {isUploading && <p className="text-xs text-muted-foreground">Đang tải ảnh...</p>}
+              </div>
+
+              {/* Gallery Images */}
+              <div className="space-y-2">
+                <Label>Ảnh mô tả (có thể chọn nhiều ảnh)</Label>
+                {galleryUrls.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mb-2">
+                    {galleryUrls.map((u, i) => (
+                      <img key={i} src={u} alt={`gallery-${i}`} className="h-20 w-20 object-cover rounded border" />
+                    ))}
+                  </div>
+                )}
+                <Input type="file" accept="image/*" multiple onChange={(e) => handleGalleryFilesChange(e.target.files)} />
+                {galleryUploading && <p className="text-xs text-muted-foreground">Đang tải ảnh bộ sưu tập...</p>}
               </div>
 
               {/* Preview */}

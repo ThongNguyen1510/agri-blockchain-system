@@ -246,7 +246,18 @@ const Trace = () => {
       setVerificationStatus({ loading: false, result });
     } catch (error) {
       const msg = error instanceof Error ? error.message : "Anchor thất bại";
-      toast.error(msg);
+      if (msg.toLowerCase().includes("already anchored")) {
+        toast.info("Lô hàng này đã được ghi lên blockchain trước đó.");
+        // Đồng bộ lại trạng thái xác thực để ẩn nút Anchor
+        try {
+          const result = await apiClient.verifyBatch(selectedBatch.id, token);
+          setVerificationStatus({ loading: false, result });
+        } catch {
+          // ignore verify error here
+        }
+      } else {
+        toast.error(msg);
+      }
     }
   };
 
@@ -507,18 +518,23 @@ const Trace = () => {
               </div>
             )}
 
-            {selectedBatch.hashSha256 && (
-              <Button
-                variant="outline"
-                className="w-full gap-2"
-                onClick={() =>
-                  window.open(`https://etherscan.io/search?q=${selectedBatch.hashSha256}`, "_blank", "noopener")
-                }
-              >
-                Xem trên block explorer
-                <ExternalLink className="h-4 w-4" />
-              </Button>
-            )}
+            {selectedBatch.hashSha256 && (() => {
+              const base = import.meta.env.VITE_EXPLORER_TX_BASE as string | undefined;
+              if (!base || base === "local") {
+                // Đang chạy local, không có explorer public nên ẩn nút
+                return null;
+              }
+              return (
+                <Button
+                  variant="outline"
+                  className="w-full gap-2"
+                  onClick={() => window.open(`${base}${selectedBatch.hashSha256}`, "_blank", "noopener")}
+                >
+                  Xem trên block explorer
+                  <ExternalLink className="h-4 w-4" />
+                </Button>
+              );
+            })()}
           </div>
         </Card>
 

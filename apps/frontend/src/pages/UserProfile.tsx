@@ -178,7 +178,10 @@ const UserProfile = () => {
                 <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-gradient-hero flex items-center justify-center">
                   <User className="h-10 w-10 text-white" />
                 </div>
-                <h2 className="text-xl font-semibold mb-2">{user?.email}</h2>
+                <h2 className="text-xl font-semibold mb-1">{user?.displayName || user?.email}</h2>
+                {user?.displayName && (
+                  <p className="text-xs text-muted-foreground">{user?.email}</p>
+                )}
                 {user?.role && getRoleBadge(user.role)}
               </div>
 
@@ -209,7 +212,42 @@ const UserProfile = () => {
                   </div>
                 </div>
 
-                {/* Bỏ hiển thị ngày tham gia vì UserDto không có createdAt */}
+                {user?.phone && (
+                  <div className="flex items-center gap-3">
+                    <Shield className="h-5 w-5 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm text-muted-foreground">Số điện thoại</p>
+                      <p className="font-medium">{user.phone}</p>
+                    </div>
+                  </div>
+                )}
+                {user?.address && (
+                  <div className="flex items-center gap-3">
+                    <Shield className="h-5 w-5 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm text-muted-foreground">Địa chỉ</p>
+                      <p className="font-medium">{user.address}</p>
+                    </div>
+                  </div>
+                )}
+                {user?.taxId && (
+                  <div className="flex items-center gap-3">
+                    <Shield className="h-5 w-5 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm text-muted-foreground">Mã số thuế</p>
+                      <p className="font-medium">{user.taxId}</p>
+                    </div>
+                  </div>
+                )}
+                {user?.businessLicense && (
+                  <div className="flex items-center gap-3">
+                    <Shield className="h-5 w-5 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm text-muted-foreground">Giấy phép kinh doanh</p>
+                      <p className="font-medium break-all">{user.businessLicense}</p>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="mt-6 pt-6 border-t">

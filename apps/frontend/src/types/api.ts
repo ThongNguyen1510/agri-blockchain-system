@@ -5,6 +5,13 @@ export interface UserDto {
   email: string;
   role: UserRole;
   walletAddress: string;
+  displayName?: string | null;
+  phone?: string | null;
+  address?: string | null;
+  taxId?: string | null;
+  businessLicense?: string | null;
+  kycVerified?: boolean;
+  kycNote?: string | null;
 }
 
 export interface BatchDto {
@@ -44,6 +51,7 @@ export interface ProductDto {
   createdAt: string;
   seller?: UserDto | null;
   batch?: BatchDto | null;
+  images?: Array<{ id: number; url: string; sortOrder: number }>; 
 }
 
 export interface OrderProductSummaryDto {

@@ -13,7 +13,7 @@ const ProductCard = ({ product }: ProductCardProps) => {
   const { id, name, priceWei, stock, coverImageUrl, seller, batch, batchId } = product;
 
   const image = coverImageUrl ?? "/placeholder.svg";
-  const sellerName = seller?.email ?? "Chưa cập nhật";
+  const sellerName = seller?.displayName || seller?.email || "Chưa cập nhật";
   const batchCode = batch?.batchCode ?? `#${batchId}`;
   const category = batch?.variety ?? "Khác";
   const location = batch?.farmName ?? "Đang cập nhật vùng trồng";

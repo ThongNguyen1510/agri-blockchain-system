@@ -11,6 +11,7 @@ type ProductWithRelations = Product & { seller: User; batch: Batch | null };
 const productInclude = {
   batch: true,
   seller: true,
+  images: { orderBy: { sortOrder: "asc" as const } },
 } as const;
 
 @Injectable()
@@ -146,5 +147,44 @@ export class ProductsService {
     }
 
     await this.prisma.product.delete({ where: { id } });
+  }
+
+  async addImages(
+    productId: number,
+    sellerId: number,
+    urls: string[],
+    sortOrders?: number[],
+  ): Promise<ProductWithRelations> {
+    const product = await this.prisma.product.findUnique({ where: { id: productId } });
+    if (!product) throw new NotFoundException("Product not found");
+    if (product.sellerId !== sellerId) throw new ForbiddenException("You can only update your own products");
+
+    const existingCount = await this.prisma.productImage.count({ where: { productId } });
+    const maxImages = 20;
+    if (existingCount + urls.length > maxImages) {
+      throw new ForbiddenException(`Vượt quá tối đa ${maxImages} ảnh cho một sản phẩm`);
+    }
+
+    const data = urls.map((url, idx) => ({
+      productId,
+      url,
+      sortOrder: sortOrders && sortOrders[idx] !== undefined ? sortOrders[idx] : existingCount + idx,
+    }));
+
+    await this.prisma.productImage.createMany({ data });
+
+    return this.prisma.product.findUniqueOrThrow({ where: { id: productId }, include: productInclude });
+  }
+
+  async deleteImage(productId: number, imageId: number, sellerId: number): Promise<ProductWithRelations> {
+    const product = await this.prisma.product.findUnique({ where: { id: productId } });
+    if (!product) throw new NotFoundException("Product not found");
+    if (product.sellerId !== sellerId) throw new ForbiddenException("You can only update your own products");
+
+    const image = await this.prisma.productImage.findUnique({ where: { id: imageId } });
+    if (!image || image.productId !== productId) throw new NotFoundException("Image not found");
+
+    await this.prisma.productImage.delete({ where: { id: imageId } });
+    return this.prisma.product.findUniqueOrThrow({ where: { id: productId }, include: productInclude });
   }
 }

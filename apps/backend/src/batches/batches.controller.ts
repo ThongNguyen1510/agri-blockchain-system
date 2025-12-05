@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, ParseIntPipe, Patch, Post, UseGuards } from "@nestjs/common";
+import { BadRequestException, Body, Controller, Get, Param, ParseIntPipe, Patch, Post, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import { CurrentUser } from "../auth/decorators/current-user.decorator";
 import type { CurrentUserType } from "../auth/decorators/current-user.decorator";
@@ -112,6 +112,12 @@ export class BatchesController {
 
     if (!this.blockchainService.isAvailable()) {
       throw new Error("Blockchain service not available");
+    }
+
+    // Nếu batch đã được anchor trước đó thì không cho anchor lại để tránh revert "Batch already anchored"
+    const alreadyAnchored = await this.blockchainService.isBatchAnchored(batch.id);
+    if (alreadyAnchored) {
+      throw new BadRequestException("Batch already anchored on blockchain");
     }
 
     const tx = await this.blockchainService.anchorBatchHashTx(batch.id, {

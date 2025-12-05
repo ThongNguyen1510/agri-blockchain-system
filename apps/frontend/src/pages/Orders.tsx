@@ -58,36 +58,59 @@ const Orders = () => {
     staleTime: 1000 * 30,
   });
 
-  // Gọi MetaMask để thanh toán ký quỹ vào contract AgroEscrow
+  // Gọi MetaMask để thanh toán ký quỹ vào contract AgroEscrow (best effort),
+  // nếu blockchain lỗi vẫn đánh dấu ký quỹ off-chain để demo / sử dụng được.
   const payEscrow = async (order: OrderDto) => {
+    if (!token) {
+      toast.error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.");
+      return;
+    }
+
+    // Fallback ví đang dùng từ hồ sơ user (backend sẽ kiểm tra trùng ví này)
+    let connectedWallet: string | null = (user as any)?.walletAddress ?? null;
+
     try {
-      if (!window.ethereum) {
-        toast.error("Không tìm thấy ví (MetaMask)");
+      setPayingId(order.id);
+
+      try {
+        if (!window.ethereum) {
+          throw new Error("Không tìm thấy ví (MetaMask)");
+        }
+
+        // Yêu cầu MetaMask cấp quyền
+        await window.ethereum.request?.({ method: "eth_requestAccounts" });
+        const provider = new ethers.BrowserProvider(window.ethereum as any);
+        const signer = await provider.getSigner();
+
+        const contract = new ethers.Contract(addressJson.address, abiJson as any, signer);
+        // productId trên chain dạng bytes32: ta encode từ productId số nguyên
+        const productIdBytes = ethers.encodeBytes32String(String(order.productId));
+        // Dùng ví của người bán từ backend để escrow chuyển tiền đúng đối tượng
+        const sellerAddr = order.sellerWalletAddress ?? (await signer.getAddress());
+        const tx = await contract.createOrder(sellerAddr, productIdBytes, {
+          value: order.totalWei,
+        });
+        await tx.wait();
+
+        connectedWallet = await signer.getAddress();
+        toast.success("Đã thanh toán ký quỹ trên blockchain");
+      } catch (chainError: any) {
+        console.error("Blockchain escrow error (tiếp tục đánh dấu off-chain):", chainError);
+        toast.warning("Không thể thanh toán ký quỹ trên blockchain. Đơn sẽ được đánh dấu ký quỹ trong hệ thống.");
+      }
+
+      if (!connectedWallet) {
+        toast.error("Không xác định được địa chỉ ví của bạn để đánh dấu ký quỹ");
         return;
       }
-      setPayingId(order.id);
-      // Yêu cầu MetaMask cấp quyền
-      await window.ethereum.request?.({ method: "eth_requestAccounts" });
-      const provider = new ethers.BrowserProvider(window.ethereum as any);
-      const signer = await provider.getSigner();
 
-      const contract = new ethers.Contract(addressJson.address, abiJson as any, signer);
-      // productId trên chain dạng bytes32: ta encode từ productId số nguyên
-      const productIdBytes = ethers.encodeBytes32String(String(order.productId));
-      // Dùng ví của người bán từ backend để escrow chuyển tiền đúng đối tượng
-      const sellerAddr = order.sellerWalletAddress ?? (await signer.getAddress());
-      const tx = await contract.createOrder(sellerAddr, productIdBytes, {
-        value: order.totalWei,
-      });
-      await tx.wait();
-
-      // Sau khi on-chain thành công, gọi API để đổi trạng thái PENDING -> IN_ESCROW
-      const connected = await signer.getAddress();
-      await apiClient.holdOrder(order.id, token!, connected);
+      // Gọi API để đổi trạng thái PENDING -> IN_ESCROW, luôn chạy dù on-chain có thành công hay không
+      await apiClient.holdOrder(order.id, token!, connectedWallet);
       await queryClient.invalidateQueries({ queryKey: ["orders"] });
-      toast.success("Đã thanh toán ký quỹ thành công");
+      toast.success("Đã đánh dấu ký quỹ thành công trong hệ thống");
     } catch (e: any) {
-      toast.error(e?.message ?? "Thanh toán thất bại");
+      console.error("Escrow payment error:", e);
+      toast.error(e?.message ?? "Thanh toán ký quỹ thất bại");
     } finally {
       setPayingId(null);
     }

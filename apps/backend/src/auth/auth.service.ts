@@ -33,6 +33,9 @@ export class AuthService {
       role: dto.role,
       walletAddress: dto.walletAddress,
       passwordHash,
+      displayName: dto.displayName,
+      phone: dto.phone,
+      address: dto.address,
     });
 
     return this.buildAuthResponse(user);

@@ -10,6 +10,9 @@ interface CreateUserPayload {
   passwordHash: string;
   role: UserRole;
   walletAddress: string;
+  displayName: string;
+  phone?: string;
+  address?: string;
 }
 
 @Injectable()
@@ -27,6 +30,9 @@ export class UsersService {
           passwordHash: payload.passwordHash,
           role: payload.role,
           walletAddress: payload.walletAddress,
+          displayName: payload.displayName,
+          phone: payload.phone ?? null,
+          address: payload.address ?? null,
         },
       });
     } catch (error) {

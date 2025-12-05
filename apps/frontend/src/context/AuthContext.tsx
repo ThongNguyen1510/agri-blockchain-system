@@ -19,7 +19,15 @@ interface AuthState {
 interface AuthContextValue extends AuthState {
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, role: string, walletAddress: string) => Promise<void>;
+  register: (
+    email: string,
+    password: string,
+    role: string,
+    walletAddress: string,
+    displayName: string,
+    phone?: string,
+    address?: string,
+  ) => Promise<void>;
   logout: () => void;
   setAuth: (payload: AuthResponseDto) => void;
 }
@@ -75,8 +83,16 @@ export const AuthProvider = ({ children }: PropsWithChildren): JSX.Element => {
   );
 
   const register = useCallback(
-    async (email: string, password: string, role: string, walletAddress: string) => {
-      const response = await apiClient.register(email, password, role, walletAddress);
+    async (
+      email: string,
+      password: string,
+      role: string,
+      walletAddress: string,
+      displayName: string,
+      phone?: string,
+      address?: string,
+    ) => {
+      const response = await apiClient.register(email, password, role, walletAddress, displayName, phone, address);
       persistState({ token: response.accessToken, user: response.user });
     },
     [persistState],

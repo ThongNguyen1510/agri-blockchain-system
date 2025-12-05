@@ -15,8 +15,9 @@ export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @Get("me")
-  getProfile(@CurrentUser() user: CurrentUserType): UserDto {
-    return UserDto.fromEntity(user as any);
+  async getProfile(@CurrentUser() user: CurrentUserType): Promise<UserDto> {
+    const full = await this.usersService.findById(user.id);
+    return UserDto.fromEntity(full);
   }
 
   // Tạo nonce để người dùng ký bằng ví CŨ khi muốn đổi ví

@@ -134,10 +134,18 @@ export const apiClient = {
     });
   },
 
-  register(email: string, password: string, role: string, walletAddress: string) {
+  register(
+    email: string,
+    password: string,
+    role: string,
+    walletAddress: string,
+    displayName: string,
+    phone?: string,
+    address?: string,
+  ) {
     return apiRequest<AuthResponseDto>("/auth/register", {
       method: "POST",
-      body: JSON.stringify({ email, password, role, walletAddress }),
+      body: JSON.stringify({ email, password, role, walletAddress, displayName, phone, address }),
     });
   },
 
@@ -279,6 +287,21 @@ export const apiClient = {
       method: "PATCH",
       token,
       body: JSON.stringify(params),
+    });
+  },
+
+  addProductImages(productId: number, urls: string[], sortOrders: number[] | undefined, token: string) {
+    return apiRequest<ProductDto>(`/products/${productId}/images`, {
+      method: "POST",
+      token,
+      body: JSON.stringify({ urls, sortOrders }),
+    });
+  },
+
+  deleteProductImage(productId: number, imageId: number, token: string) {
+    return apiRequest<ProductDto>(`/products/${productId}/images/${imageId}`, {
+      method: "DELETE",
+      token,
     });
   },
 

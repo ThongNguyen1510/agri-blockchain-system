@@ -45,21 +45,26 @@ export function CheckoutModal({ open, onOpenChange, product, quantity, onSuccess
     }
 
     try {
-      // Step 1: Create order on blockchain
-      setStep("blockchain");
-      toast.info("Đang tạo đơn hàng trên blockchain...");
+      // Step 1: Create order on blockchain (best effort)
+      try {
+        setStep("blockchain");
+        toast.info("Đang tạo đơn hàng trên blockchain...");
 
-      const { orderId, txHash: hash } = await createOrderOnChain(
-        product.seller.walletAddress,
-        `PRODUCT-${product.id}`,
-        totalWei.toString()
-      );
+        const { orderId, txHash: hash } = await createOrderOnChain(
+          product.seller.walletAddress,
+          `PRODUCT-${product.id}`,
+          totalWei.toString()
+        );
 
-      setBlockchainOrderId(orderId);
-      setTxHash(hash);
-      toast.success("Đã tạo đơn hàng trên blockchain!");
+        setBlockchainOrderId(orderId);
+        setTxHash(hash);
+        toast.success("Đã tạo đơn hàng trên blockchain!");
+      } catch (chainError) {
+        console.error("Blockchain order error (tiếp tục tạo đơn off-chain):", chainError);
+        toast.warning("Không thể tạo đơn trên blockchain. Đơn hàng vẫn được lưu trong hệ thống.");
+      }
 
-      // Step 2: Save to backend
+      // Step 2: Save to backend (always required)
       setStep("backend");
       toast.info("Đang lưu thông tin đơn hàng...");
 
