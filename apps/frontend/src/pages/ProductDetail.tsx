@@ -307,9 +307,9 @@ const ProductDetail = () => {
 
         {product && (
           <div className="mt-12 space-y-12">
-            {/* Phần chứng nhận */}
-            <CertificationsList productId={product.id} />
-            
+            {/* Phần chứng nhận: ưu tiên chứng nhận theo lô hàng */}
+            <CertificationsList batchId={product.batchId} />
+
             {/* Phần đánh giá */}
             <ReviewSection productId={product.id} />
           </div>

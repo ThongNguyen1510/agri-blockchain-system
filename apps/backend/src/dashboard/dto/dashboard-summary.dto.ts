@@ -5,6 +5,9 @@ class DashboardStatsDto {
   totalOrders!: number;
 
   @ApiProperty()
+  totalProducts!: number;
+
+  @ApiProperty()
   activeEscrows!: number;
 
   @ApiProperty()

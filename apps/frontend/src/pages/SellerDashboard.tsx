@@ -35,7 +35,7 @@ const SellerDashboard = () => {
   const stats = [
     {
       title: "Tổng sản phẩm",
-      value: dashboardData?.stats.totalOrders || 0,
+      value: dashboardData?.stats.totalProducts || 0,
       icon: Package,
       color: "text-blue-600",
       bgColor: "bg-blue-50",
@@ -146,9 +146,12 @@ const SellerDashboard = () => {
       <div className="container mx-auto px-4 py-12">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-4xl font-bold mb-4">Bảng điều khiển Seller</h1>
+          <h1 className="text-4xl font-bold mb-2">Bảng điều khiển Seller</h1>
           <p className="text-lg text-muted-foreground">
-            Chào mừng trở lại, <span className="font-semibold text-primary">{user?.email}</span>
+            Chào mừng trở lại,{' '}
+            <span className="font-semibold text-primary">
+              {user?.displayName || user?.email}
+            </span>
           </p>
         </div>
 
@@ -225,17 +228,34 @@ const SellerDashboard = () => {
           </div>
         )}
 
-        {/* Sales Chart Placeholder */}
+        {/* Sales Chart */}
         <div className="mb-8">
           <h2 className="text-2xl font-bold mb-6">Biểu đồ doanh thu</h2>
           <Card className="p-6">
-            <div className="flex items-center justify-center h-64 text-muted-foreground">
-              <div className="text-center">
-                <BarChart3 className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>Biểu đồ doanh thu sẽ được hiển thị ở đây</p>
-                <p className="text-sm">Tính năng đang phát triển</p>
+            {dashboardData && dashboardData.sales && dashboardData.sales.length > 0 ? (
+              <div className="h-64 flex items-end gap-4">
+                {(() => {
+                  const max = Math.max(...dashboardData.sales.map((p) => p.value), 1);
+                  return dashboardData.sales.map((point) => (
+                    <div key={point.label} className="flex-1 flex flex-col items-center justify-end gap-2">
+                      <div className="w-full rounded-t-md bg-emerald-500/80" style={{ height: `${(point.value / max) * 100}%` }} />
+                      <div className="text-xs text-muted-foreground text-center">
+                        <div className="font-semibold">{point.value.toFixed(2)}</div>
+                        <div>{point.label}</div>
+                      </div>
+                    </div>
+                  ));
+                })()}
               </div>
-            </div>
+            ) : (
+              <div className="flex items-center justify-center h-64 text-muted-foreground">
+                <div className="text-center">
+                  <BarChart3 className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>Chưa có dữ liệu doanh thu để hiển thị</p>
+                  <p className="text-sm">Hệ thống sẽ cập nhật khi có đơn hàng được giải phóng</p>
+                </div>
+              </div>
+            )}
           </Card>
         </div>
       </div>

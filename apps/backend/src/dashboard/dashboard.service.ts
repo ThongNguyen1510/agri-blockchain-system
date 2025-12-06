@@ -12,8 +12,9 @@ export class DashboardService {
 
   async getSummary(user: CurrentUserType): Promise<DashboardSummaryDto> {
     const orderFilter = this.buildOrderFilter(user);
+    const isSeller = user.role === "Seller";
 
-    const [totalOrders, activeEscrows, disputes, releasedAmounts] = await Promise.all([
+    const [totalOrders, activeEscrows, disputes, releasedAmounts, totalProducts] = await Promise.all([
       this.prisma.order.count({ where: orderFilter }),
       this.prisma.order.count({ where: { ...orderFilter, status: "Held" } }),
       this.prisma.order.count({ where: { ...orderFilter, status: "Disputed" } }),
@@ -23,6 +24,9 @@ export class DashboardService {
         select: { totalWei: true },
         take: 5000, // giới hạn an toàn cho dashboard
       }),
+      isSeller
+        ? this.prisma.product.count({ where: { sellerId: user.id } })
+        : Promise.resolve(0),
     ]);
 
     const recentOrders = await this.prisma.order.findMany({
@@ -50,6 +54,7 @@ export class DashboardService {
 
     const stats = {
       totalOrders,
+      totalProducts,
       activeEscrows,
       disputes,
       releasedVolumeEth: this.toEthString(releasedTotalWei),

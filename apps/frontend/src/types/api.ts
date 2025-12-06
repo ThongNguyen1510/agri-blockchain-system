@@ -107,6 +107,7 @@ export interface AuthResponseDto {
 
 export interface DashboardStatsDto {
   totalOrders: number;
+  totalProducts: number;
   activeEscrows: number;
   releasedVolumeEth: string;
   disputes: number;
